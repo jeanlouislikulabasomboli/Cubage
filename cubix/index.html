@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0b1118">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>CUBIX — Mesure de volume (m³) sur sol et en benne</title>
+<style>
+:root{
+  --bg:#0b1118; --s1:#141d28; --s2:#1b2634; --s3:#243143;
+  --tx:#eaf2fb; --mut:#90a4ba; --acc:#ff8a3d; --acc2:#ffb27a;
+  --ok:#2fd27a; --warn:#ffd166; --err:#ff6b6b; --line:#26344a;
+  --r:16px; --r2:22px; --sh:0 6px 24px rgba(0,0,0,.35);
+}
+[data-theme="light"]{
+  --bg:#eef2f7; --s1:#ffffff; --s2:#f4f7fb; --s3:#e6edf6;
+  --tx:#0d1724; --mut:#5a6b80; --line:#dbe4ef; --sh:0 6px 20px rgba(15,35,65,.10);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--tx);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+  overscroll-behavior-y:none;
+}
+button,input,select{font-family:inherit;font-size:16px}
+.app{display:flex;flex-direction:column;height:100dvh;max-width:1180px;margin:0 auto;background:var(--bg)}
+/* ---------- TOPBAR ---------- */
+.top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;
+  background:linear-gradient(180deg,var(--s1),var(--s1) 70%,transparent);position:sticky;top:0;z-index:30}
+.top h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.2px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sub{display:block;font-size:11.5px;color:var(--mut);font-weight:600}
+.ic{width:42px;height:42px;flex:0 0 42px;border-radius:13px;border:1px solid var(--line);background:var(--s2);
+  color:var(--tx);display:grid;place-items:center;font-size:19px;cursor:pointer}
+.ic:active{transform:scale(.94)}
+/* ---------- MAIN ---------- */
+main{flex:1;overflow-y:auto;padding:4px 14px 20px;-webkit-overflow-scrolling:touch}
+.wrap{display:grid;gap:14px}
+@media(min-width:900px){ .cols{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start} }
+h2.sec{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--mut);margin:16px 2px 2px;font-weight:800}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r2);padding:16px;box-shadow:var(--sh)}
+.hint{color:var(--mut);font-size:13.5px}
+/* ---------- HOME ---------- */
+.hero{background:linear-gradient(135deg,#ff8a3d22,#2fd27a14);border:1px solid var(--line);border-radius:var(--r2);padding:18px}
+.hero b{font-size:20px}
+.big2{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:var(--r2);padding:16px 14px;text-align:left;color:var(--tx);cursor:pointer;display:grid;gap:6px}
+.tile:active{transform:scale(.98)}
+.tile .em{font-size:30px}
+.tile b{font-size:16px}
+.tile span{font-size:12.5px;color:var(--mut);line-height:1.3}
+.list{display:grid;gap:10px}
+.row{display:flex;gap:12px;align-items:center;background:var(--s1);border:1px solid var(--line);
+  border-radius:var(--r);padding:12px;cursor:pointer;text-align:left;color:var(--tx);width:100%}
+.row:active{transform:scale(.99)}
+.row .thumb{width:62px;height:48px;flex:0 0 62px;border-radius:10px;background:var(--s2);display:grid;place-items:center;overflow:hidden}
+.row .thumb svg{width:100%;height:100%}
+.row b{display:block;font-size:15px}
+.row small{color:var(--mut);font-size:12.5px;display:block;line-height:1.3}
+.chevron{margin-left:auto;color:var(--mut);font-size:20px}
+/* ---------- CHIPS / TOGGLES ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:var(--s2);color:var(--tx);
+  font-size:14px;font-weight:650;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#1a1008}
+.seg{display:flex;background:var(--s2);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;color:var(--mut);padding:9px 10px;border-radius:999px;font-weight:700;cursor:pointer}
+.seg button.on{background:var(--acc);color:#1a1008}
+/* ---------- FIELD ---------- */
+.field{background:var(--s1);border:1px solid var(--line);border-radius:var(--r2);padding:14px;display:grid;gap:10px}
+.field.active{border-color:var(--acc);box-shadow:0 0 0 2px #ff8a3d33}
+.flabel{display:flex;gap:10px;align-items:flex-start}
+.flabel .num{width:26px;height:26px;flex:0 0 26px;border-radius:9px;background:var(--acc);color:#1a1008;
+  display:grid;place-items:center;font-weight:900;font-size:13px}
+.flabel b{font-size:15.5px;line-height:1.25}
+.flabel .q{margin-left:auto;width:34px;height:34px;flex:0 0 34px;border-radius:10px;border:1px solid var(--line);
+  background:var(--s2);color:var(--acc);font-weight:900;cursor:pointer}
+.inp{display:flex;gap:8px;align-items:center}
+.inp input{flex:1;min-width:0;background:var(--s2);border:1px solid var(--line);border-radius:14px;color:var(--tx);
+  padding:14px 12px;font-size:21px;font-weight:800;text-align:right;letter-spacing:.5px}
+.inp input:focus{outline:none;border-color:var(--acc);background:var(--s3)}
+.inp .u{color:var(--mut);font-weight:800;width:34px;text-align:left}
+.inp .del{border:0;background:transparent;color:var(--mut);font-size:20px;cursor:pointer;padding:0 4px}
+.addbtn{border:1px dashed var(--line);background:transparent;color:var(--acc);border-radius:12px;padding:10px;
+  font-weight:750;cursor:pointer;font-size:13.5px}
+.avg{font-size:12.5px;color:var(--ok);font-weight:750}
+.steps{margin:0;padding-left:0;list-style:none;display:grid;gap:5px}
+.steps li{font-size:13.5px;color:var(--mut);display:flex;gap:8px}
+.steps li i{font-style:normal;color:var(--acc);font-weight:900}
+/* ---------- ANIM ---------- */
+.anim{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;position:relative}
+.anim svg{display:block;width:100%;height:auto}
+.anim .tag{position:absolute;top:8px;left:10px;font-size:11px;font-weight:800;letter-spacing:.6px;
+  color:var(--acc);background:#00000055;padding:3px 8px;border-radius:99px;text-transform:uppercase}
+[data-theme="light"] .anim .tag{background:#ffffffcc}
+.f1{fill:#6b7c93}.f2{fill:#55667d}.f3{fill:#45556b}
+[data-theme="light"] .f1{fill:#aebdd1}[data-theme="light"] .f2{fill:#98a9c0}[data-theme="light"] .f3{fill:#8295ae}
+.edge{fill:none;stroke:#0e1620;stroke-width:2;stroke-linejoin:round}
+[data-theme="light"] .edge{stroke:#4b5c73}
+.gr{stroke:#3c4c63;stroke-width:3;stroke-linecap:round}
+.wall{fill:#3a4659}
+.steel{fill:#4e5f76}.steel2{fill:#3e4d61}
+.dsh{fill:none;stroke:#8aa0b8;stroke-width:1.6;stroke-dasharray:5 5}
+.mline{fill:none;stroke:var(--acc);stroke-width:4;stroke-linecap:round;filter:drop-shadow(0 0 5px #ff8a3d88)}
+.mdot{fill:#fff;stroke:var(--acc);stroke-width:3}
+.lab{fill:var(--acc);font:800 14px system-ui}
+.cap{fill:var(--mut);font:700 11px system-ui}
+.tick{stroke:var(--acc);stroke-width:3;stroke-linecap:round}
+/* ---------- RESULT DOCK ---------- */
+.dock{position:sticky;bottom:0;z-index:25;background:linear-gradient(0deg,var(--s1) 72%,transparent);
+  padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);border-top:1px solid var(--line)}
+.res{display:flex;align-items:center;gap:12px}
+.res .v{font-size:34px;font-weight:900;letter-spacing:-.5px;line-height:1}
+.res .v small{font-size:16px;color:var(--mut);font-weight:800}
+.res .m{font-size:12.5px;color:var(--mut);font-weight:650}
+.res .m b{color:var(--ok)}
+.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:800;cursor:pointer;font-size:15px}
+.btn.p{background:var(--acc);color:#1a1008}
+.btn.g{background:var(--s3);color:var(--tx);border:1px solid var(--line)}
+.btn.full{width:100%}
+.btn:active{transform:scale(.97)}
+.bar{display:flex;gap:8px;margin-top:9px}
+.bar .btn{flex:1;font-size:13.5px;padding:11px 8px}
+/* ---------- NAV ---------- */
+nav{display:flex;background:var(--s1);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:transparent;border:0;color:var(--mut);padding:9px 0 10px;font-size:10.5px;
+  font-weight:800;display:grid;gap:3px;cursor:pointer;letter-spacing:.3px}
+nav button em{font-style:normal;font-size:20px}
+nav button.on{color:var(--acc)}
+/* ---------- SHEET ---------- */
+.sheet{position:fixed;inset:0;z-index:60;display:none}
+.sheet.open{display:block}
+.sheet .bg{position:absolute;inset:0;background:#000a;backdrop-filter:blur(3px)}
+.sheet .pan{position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow-y:auto;background:var(--s1);
+  border-radius:26px 26px 0 0;padding:10px 16px calc(env(safe-area-inset-bottom) + 20px);
+  border-top:1px solid var(--line);animation:up .22s ease}
+@media(min-width:900px){.sheet .pan{left:50%;transform:translateX(-50%);width:640px;border-radius:26px;bottom:20px;max-height:84dvh}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 12px}
+/* ---------- EXPLAIN ---------- */
+.calc{background:var(--s2);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:5px;margin-bottom:9px}
+.calc .t{font-size:12px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.calc .f{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14.5px;color:var(--acc2);word-break:break-word}
+.calc .r{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14.5px;word-break:break-word}
+.calc .r b{color:var(--ok);font-size:16px}
+.why{background:#2fd27a14;border:1px solid #2fd27a44;border-radius:14px;padding:12px;font-size:14px}
+.why b{color:var(--ok)}
+.warn{background:#ffd16614;border:1px solid #ffd16655;border-radius:14px;padding:11px;font-size:13.5px}
+table.tb{width:100%;border-collapse:collapse;font-size:13.5px}
+table.tb td{padding:7px 4px;border-bottom:1px solid var(--line)}
+table.tb td:last-child{text-align:right;font-weight:800}
+.gridh{display:grid;gap:6px}
+.gridh .gr-row{display:flex;gap:6px}
+.gridh input{flex:1;min-width:0;background:var(--s2);border:1px solid var(--line);border-radius:10px;color:var(--tx);
+  padding:11px 6px;text-align:center;font-weight:800;font-size:16px}
+.sr{display:flex;gap:7px;align-items:center;margin-bottom:7px}
+.sr span{font-size:12px;color:var(--mut);font-weight:800;width:34px}
+.sr input{flex:1;min-width:0;background:var(--s2);border:1px solid var(--line);border-radius:10px;color:var(--tx);
+  padding:11px 8px;text-align:right;font-weight:800;font-size:16px}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv b{font-weight:800}
+.empty{text-align:center;color:var(--mut);padding:40px 20px;font-size:14px}
+.pill{display:inline-block;background:var(--s3);border:1px solid var(--line);border-radius:99px;padding:3px 9px;font-size:11.5px;font-weight:800;color:var(--mut)}
+.prog{display:flex;gap:5px;margin:2px 0 6px}
+.prog i{height:4px;flex:1;border-radius:9px;background:var(--line)}
+.prog i.on{background:var(--acc)}
+video{width:100%;border-radius:14px;display:block;background:#000}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="ic" id="back" style="display:none">‹</button>
+    <h1 id="ttl">CUBIX<span class="sub">Calcul de volume réel — m³</span></h1>
+    <button class="ic" id="unit" title="Unité de saisie">m</button>
+    <button class="ic" id="theme" title="Thème">◐</button>
+  </header>
+  <main id="app"></main>
+  <div id="dock"></div>
+  <nav id="nav"></nav>
+</div>
+
+<div class="sheet" id="sheet"><div class="bg" data-act="closeSheet"></div><div class="pan" id="pan"></div></div>
+
+<script>
+/* ==========================================================================
+   CUBIX — mesure de volume de matériaux (sol, benne, contenants)
+   Aucune formule inventée : géométrie classique + méthodes topographiques
+   (prismatoïde, règle de Simpson, méthode des prismes/grille).
+   ========================================================================== */
+const $=s=>document.querySelector(s);
+const PI=Math.PI;
+const uid=(()=>{let i=0;return()=>'u'+(++i)})();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function pn(v){ if(v===null||v===undefined) return NaN; const s=String(v).replace(',','.').trim(); if(s==='')return NaN; const n=parseFloat(s); return isFinite(n)?n:NaN; }
+function fmt(n,d=2){ if(!isFinite(n))return '—'; return n.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtv(n){ if(!isFinite(n))return '—'; if(n<1) return fmt(n,3); if(n<10) return fmt(n,2); return fmt(n,2); }
+const LS={ get(k,d){try{const v=localStorage.getItem('cubix.'+k);return v?JSON.parse(v):d}catch(e){return d}},
+           set(k,v){try{localStorage.setItem('cubix.'+k,JSON.stringify(v))}catch(e){}} };
+
+/* ------------------------------------------------------------------ */
+/* MASSES VOLUMIQUES INDICATIVES (matériau en vrac / foisonné, t/m³)    */
+/* Valeurs usuelles de chantier — à confirmer sur le bon de livraison.  */
+/* ------------------------------------------------------------------ */
+const MATS=[
+ {g:'Granulats',n:'Sable sec',d:1.45},{g:'Granulats',n:'Sable humide',d:1.70},
+ {g:'Granulats',n:'Sable de rivière',d:1.55},{g:'Granulats',n:'Gravier / gravillon lavé',d:1.50},
+ {g:'Granulats',n:'Galets',d:1.55},{g:'Granulats',n:'Grave / tout-venant 0-31,5',d:1.70},
+ {g:'Granulats',n:'Concassé calcaire',d:1.50},{g:'Granulats',n:'Pouzzolane',d:0.90},
+ {g:'Terres',n:'Terre végétale sèche',d:1.30},{g:'Terres',n:'Terre humide',d:1.60},
+ {g:'Terres',n:'Argile',d:1.70},{g:'Terres',n:'Terreau / substrat',d:0.45},
+ {g:'Déchets & recyclés',n:'Gravats / remblai mêlé',d:1.40},{g:'Déchets & recyclés',n:'Béton concassé',d:1.35},
+ {g:'Déchets & recyclés',n:'Enrobé fraisé',d:1.45},{g:'Déchets & recyclés',n:'Verre concassé',d:1.30},
+ {g:'Déchets & recyclés',n:'Ferraille mêlée',d:1.00},
+ {g:'Liants & bétons',n:'Béton frais',d:2.40},{g:'Liants & bétons',n:'Mortier frais',d:2.10},
+ {g:'Liants & bétons',n:'Ciment en vrac',d:1.30},{g:'Liants & bétons',n:'Chaux',d:0.70},
+ {g:'Bois & organique',n:'Plaquettes / copeaux bois',d:0.25},{g:'Bois & organique',n:'Écorce',d:0.35},
+ {g:'Bois & organique',n:'Compost',d:0.55},{g:'Bois & organique',n:'Déchets verts broyés',d:0.30},
+ {g:'Divers',n:'Sel de déneigement',d:1.20},{g:'Divers',n:'Charbon',d:0.85},
+ {g:'Divers',n:'Céréales (blé)',d:0.78},{g:'Divers',n:'Eau',d:1.00}
+];
+const FOIS=[{n:'Sable / gravier',k:12},{n:'Terre végétale',k:25},{n:'Argile',k:30},{n:'Marne / tuf',k:40},{n:'Roche abattue',k:55}];
+
+/* ------------------------------------------------------------------ */
+/* SCÈNES SVG (dessins + trajets de mesure animés)                      */
+/* ------------------------------------------------------------------ */
+const DEFS='<defs><pattern id="gr8" width="7" height="7" patternUnits="userSpaceOnUse">'+
+ '<circle cx="2" cy="2" r="1.1" fill="#00000026"/><circle cx="5.5" cy="5" r=".9" fill="#00000020"/></pattern></defs>';
+const GROUND='<line x1="6" y1="172" x2="314" y2="172" class="gr"/>';
+
+const SC={
+ cone:{vb:'0 0 320 190',
+  base:GROUND+'<ellipse cx="160" cy="152" rx="108" ry="17" class="f2"/>'+
+   '<path d="M52,152 L160,38 L268,152 Z" class="f1"/><path d="M52,152 L160,38 L268,152 Z" fill="url(#gr8)"/>'+
+   '<path d="M52,152 L160,38 L268,152" class="edge"/><path d="M52,152 A108,17 0 0 0 268,152" class="edge"/>',
+  segs:{
+   C:[{d:'M52,152 A108,17 0 1 0 268,152 A108,17 0 1 0 52,152',lab:'tour',lx:160,ly:184}],
+   D:[{d:'M52,152 L268,152',lab:'Ø 1',lx:160,ly:146},{d:'M100,168 L220,136',lab:'Ø 2',lx:236,ly:134}],
+   S:[{d:'M52,152 L160,38',lab:'pente',lx:70,ly:92}],
+   H:[{d:'M160,152 L160,38',lab:'hauteur',lx:168,ly:96}]}},
+
+ tronc:{vb:'0 0 320 190',
+  base:GROUND+'<ellipse cx="160" cy="152" rx="108" ry="17" class="f2"/>'+
+   '<path d="M52,152 L106,62 L214,62 L268,152 Z" class="f1"/><path d="M52,152 L106,62 L214,62 L268,152 Z" fill="url(#gr8)"/>'+
+   '<ellipse cx="160" cy="62" rx="54" ry="9" class="f3"/>'+
+   '<path d="M52,152 L106,62 M214,62 L268,152" class="edge"/><path d="M52,152 A108,17 0 0 0 268,152" class="edge"/>'+
+   '<ellipse cx="160" cy="62" rx="54" ry="9" class="edge"/>',
+  segs:{
+   Db:[{d:'M52,152 L268,152',lab:'Ø bas',lx:160,ly:146}],
+   Dh:[{d:'M106,62 L214,62',lab:'Ø haut',lx:160,ly:52}],
+   H:[{d:'M160,152 L160,62',lab:'hauteur',lx:168,ly:110}],
+   S:[{d:'M52,152 L106,62',lab:'pente',lx:58,ly:100}]}},
+
+ cordon:{vb:'0 0 320 190',
+  base:GROUND+'<path d="M62,92 L272,114 L300,148 L95,128 Z" class="f2"/>'+
+   '<path d="M30,150 L62,92 L272,114 L240,172 Z" class="f1"/>'+
+   '<path d="M30,150 L62,92 L272,114 L240,172 Z" fill="url(#gr8)"/>'+
+   '<path d="M30,150 L95,128 L62,92 Z" class="f3"/>'+
+   '<path d="M30,150 L62,92 L272,114 L240,172 M62,92 L95,128 L30,150 M272,114 L300,148 L240,172 M95,128 L300,148" class="edge"/>',
+  segs:{
+   L:[{d:'M30,150 L240,172',lab:'longueur',lx:120,ly:186}],
+   W:[{d:'M135,161 L197,138',lab:'largeur',lx:200,ly:160}],
+   H:[{d:'M167,150 L167,103',lab:'hauteur',lx:174,ly:130}]}},
+
+ tasplat:{vb:'0 0 320 190',
+  base:GROUND+'<path d="M106,83 L274,101 L300,148 L95,128 Z" class="f2"/>'+
+   '<path d="M70,95 L238,113 L274,101 L106,83 Z" class="f3"/>'+
+   '<path d="M30,150 L70,95 L238,113 L240,172 Z" class="f1"/>'+
+   '<path d="M30,150 L70,95 L238,113 L240,172 Z" fill="url(#gr8)"/>'+
+   '<path d="M30,150 L95,128 L106,83 L70,95 Z" class="f3"/>'+
+   '<path d="M30,150 L70,95 L106,83 L274,101 L300,148 L240,172 Z M70,95 L238,113 L240,172 M238,113 L274,101 M30,150 L95,128 L300,148 M95,128 L106,83" class="edge"/>',
+  segs:{
+   Lb:[{d:'M30,150 L240,172',lab:'long. bas',lx:110,ly:186}],
+   Lh:[{d:'M70,95 L238,113',lab:'long. haut',lx:140,ly:92}],
+   Wb:[{d:'M135,161 L197,138',lab:'larg. bas',lx:204,ly:162}],
+   Wh:[{d:'M154,104 L190,92',lab:'larg. haut',lx:196,ly:86}],
+   H:[{d:'M166,150 L166,106',lab:'hauteur',lx:174,ly:132}]}},
+
+ mur:{vb:'0 0 320 190',
+  base:'<path d="M14,28 L306,28 L306,124 L14,124 Z" class="wall"/>'+
+   '<path d="M14,52 H306 M14,76 H306 M14,100 H306 M90,28 V52 M200,28 V52 M50,52 V76 M150,52 V76 M250,52 V76 M90,76 V100 M200,76 V100 M50,100 V124 M150,100 V124 M250,100 V124" stroke="#0e162055" fill="none"/>'+
+   GROUND+'<ellipse cx="160" cy="124" rx="100" ry="30" class="f2"/>'+
+   '<path d="M60,124 L160,42 L260,124 Z" class="f1"/><path d="M60,124 L160,42 L260,124 Z" fill="url(#gr8)"/>'+
+   '<path d="M60,124 L160,42 L260,124" class="edge"/><path d="M60,124 A100,30 0 0 0 260,124" class="edge"/>',
+  segs:{
+   Lm:[{d:'M60,124 L260,124',lab:'le long du mur',lx:160,ly:118}],
+   R:[{d:'M160,124 L160,154',lab:'mur → pied',lx:170,ly:146}],
+   H:[{d:'M160,124 L160,42',lab:'hauteur',lx:168,ly:86}],
+   S:[{d:'M60,124 L160,42',lab:'pente',lx:66,ly:82}]}},
+
+ dome:{vb:'0 0 320 190',
+  base:GROUND+'<ellipse cx="160" cy="152" rx="112" ry="17" class="f2"/>'+
+   '<path d="M48,152 A112,96 0 0 1 272,152 Z" class="f1"/><path d="M48,152 A112,96 0 0 1 272,152 Z" fill="url(#gr8)"/>'+
+   '<path d="M48,152 A112,96 0 0 1 272,152" class="edge"/><path d="M48,152 A112,17 0 0 0 272,152" class="edge"/>',
+  segs:{
+   D:[{d:'M48,152 L272,152',lab:'Ø',lx:160,ly:146}],
+   C:[{d:'M48,152 A112,17 0 1 0 272,152 A112,17 0 1 0 48,152',lab:'tour',lx:160,ly:184}],
+   H:[{d:'M160,152 L160,56',lab:'hauteur',lx:168,ly:104}]}},
+
+ sections:{vb:'0 0 320 190',
+  base:GROUND+'<path d="M16,160 C52,120 70,146 104,104 C134,66 168,118 196,92 C228,62 266,136 300,160 Z" class="f1"/>'+
+   '<path d="M16,160 C52,120 70,146 104,104 C134,66 168,118 196,92 C228,62 266,136 300,160 Z" fill="url(#gr8)"/>'+
+   '<path d="M16,160 C52,120 70,146 104,104 C134,66 168,118 196,92 C228,62 266,136 300,160" class="edge"/>'+
+   '<path d="M70,160 V128 M158,160 V86 M246,160 V112" class="dsh"/>'+
+   '<text x="62" y="176" class="cap">S1</text><text x="150" y="176" class="cap">S2</text><text x="238" y="176" class="cap">S3</text>'+
+   '<text x="14" y="22" class="cap">VUE DE CÔTÉ — on découpe le tas en tranches régulières</text>',
+  segs:{
+   L:[{d:'M16,168 L300,168',lab:'longueur totale',lx:120,ly:186}],
+   W:[{d:'M110,152 L206,152',lab:'largeur de la tranche',lx:110,ly:146}],
+   H:[{d:'M158,160 L158,86',lab:'hauteur de la tranche',lx:166,ly:120}]}},
+
+ grille:{vb:'0 0 320 190',
+  base:'<text x="12" y="18" class="cap">VUE DE DESSUS — on quadrille le tas, 1 hauteur par carreau</text>'+
+   '<path d="M40,34 L280,34 L280,162 L40,162 Z" class="f2"/><path d="M40,34 L280,34 L280,162 L40,162 Z" fill="url(#gr8)"/>'+
+   '<path d="M100,34 V162 M160,34 V162 M220,34 V162 M40,76 H280 M40,118 H280" stroke="#0e162099" fill="none"/>'+
+   '<path d="M40,34 L280,34 L280,162 L40,162 Z" class="edge"/>'+
+   '<circle cx="70" cy="55" r="4" fill="#ff8a3d"/><circle cx="130" cy="55" r="4" fill="#ff8a3d"/><circle cx="190" cy="55" r="4" fill="#ff8a3d"/><circle cx="250" cy="55" r="4" fill="#ff8a3d"/>'+
+   '<circle cx="70" cy="97" r="4" fill="#ff8a3d"/><circle cx="130" cy="97" r="4" fill="#ff8a3d"/><circle cx="190" cy="97" r="4" fill="#ff8a3d"/><circle cx="250" cy="97" r="4" fill="#ff8a3d"/>'+
+   '<circle cx="70" cy="140" r="4" fill="#ff8a3d"/><circle cx="130" cy="140" r="4" fill="#ff8a3d"/><circle cx="190" cy="140" r="4" fill="#ff8a3d"/><circle cx="250" cy="140" r="4" fill="#ff8a3d"/>',
+  segs:{
+   a:[{d:'M40,26 L100,26',lab:'côté A du carreau',lx:104,ly:24}],
+   b:[{d:'M32,34 L32,76',lab:'côté B',lx:6,ly:100}]}},
+
+ perche:{vb:'0 0 320 190',
+  base:GROUND+'<path d="M10,160 C60,130 110,96 170,100 C230,104 280,140 310,160 Z" class="f1"/>'+
+   '<path d="M10,160 C60,130 110,96 170,100 C230,104 280,140 310,160 Z" fill="url(#gr8)"/>'+
+   '<path d="M10,160 C60,130 110,96 170,100 C230,104 280,140 310,160" class="edge"/>'+
+   '<rect x="146" y="26" width="9" height="78" rx="2" class="steel"/>'+
+   '<path d="M146,40 h9 M146,54 h9 M146,68 h9 M146,82 h9 M146,96 h9" stroke="#0e1620" stroke-width="2"/>'+
+   '<text x="12" y="20" class="cap">On plante une règle/perche verticale jusqu’au sol</text>',
+  segs:{H:[{d:'M150,152 L150,100',lab:'hauteur lue',lx:160,ly:128}]}},
+
+ couche:{vb:'0 0 320 190',
+  base:'<path d="M28,132 L246,154 L300,124 L86,104 Z" class="f2"/>'+
+   '<path d="M28,132 L246,154 L300,124 L86,104 Z" fill="url(#gr8)"/>'+
+   '<path d="M28,132 L28,146 L246,168 L246,154 Z" class="f3"/>'+
+   '<path d="M246,154 L246,168 L300,138 L300,124 Z" class="f1"/>'+
+   '<path d="M28,132 L246,154 L300,124 L86,104 Z M28,132 L28,146 L246,168 L246,154 M246,168 L300,138 L300,124" class="edge"/>'+
+   GROUND,
+  segs:{
+   L:[{d:'M28,146 L246,168',lab:'longueur',lx:110,ly:184}],
+   W:[{d:'M246,168 L300,138',lab:'largeur',lx:258,ly:132}],
+   E:[{d:'M80,138 L82,152',lab:'',lx:0,ly:0},{d:'M150,145 L152,159',lab:'',lx:0,ly:0},{d:'M214,152 L216,166',lab:'épaisseur (3 points)',lx:150,ly:186}]}},
+
+ tranchee:{vb:'0 0 320 190',
+  base:'<path d="M8,96 L120,60 L312,86 L200,130 Z" class="f2"/>'+
+   '<path d="M8,96 L120,60 L312,86 L200,130 Z" fill="url(#gr8)"/>'+
+   '<path d="M58,96 L130,78 L252,94 L178,116 Z" fill="#0b1118"/>'+
+   '<path d="M58,96 L58,140 L178,164 L178,116 Z" class="f3"/>'+
+   '<path d="M178,164 L178,116 L252,94 L252,138 Z" class="f1"/>'+
+   '<path d="M58,96 L130,78 L252,94 L178,116 Z M58,96 L58,140 L178,164 L178,116 M178,164 L252,138 L252,94" class="edge"/>',
+  segs:{
+   L:[{d:'M58,96 L178,116',lab:'longueur',lx:62,ly:92}],
+   W:[{d:'M178,116 L252,94',lab:'largeur',lx:216,ly:90}],
+   P:[{d:'M58,96 L58,140',lab:'profondeur',lx:10,ly:124}]}},
+
+ benne:{vb:'0 0 320 190',
+  base:'<path d="M35,112 L85,84 L295,84 L245,112 Z" class="steel2"/>'+
+   '<path d="M40,130 L88,105 L288,105 L240,130 Z" class="f1"/>'+
+   '<path d="M40,130 L88,105 L288,105 L240,130 Z" fill="url(#gr8)"/>'+
+   '<path d="M35,112 L35,166 L245,166 L245,112 Z" class="steel"/>'+
+   '<path d="M245,112 L245,166 L295,138 L295,84 Z" class="steel2"/>'+
+   '<path d="M35,112 L85,84 L295,84 L245,112 Z M35,112 L35,166 L245,166 L245,112 M245,166 L295,138 L295,84" class="edge"/>'+
+   '<path d="M40,130 L240,130 L288,105" class="edge"/>'+
+   '<text x="252" y="182" class="cap">intérieur</text>',
+  segs:{
+   L:[{d:'M35,112 L245,112',lab:'longueur intérieure',lx:70,ly:106}],
+   W:[{d:'M245,112 L295,84',lab:'largeur',lx:252,ly:78}],
+   HB:[{d:'M35,112 L35,166',lab:'hauteur intérieure',lx:6,ly:150}],
+   HV:[{d:'M60,112 L62,124',lab:'',lx:0,ly:0},{d:'M140,112 L142,124',lab:'',lx:0,ly:0},{d:'M215,112 L217,124',lab:'vide : bord → matériau',lx:120,ly:100}],
+   HM:[{d:'M40,130 L40,166',lab:'',lx:0,ly:0},{d:'M140,130 L140,166',lab:'',lx:0,ly:0},{d:'M238,130 L238,166',lab:'hauteur de matériau',lx:120,ly:182}],
+   HS:[{d:'M140,105 L140,74',lab:'dépassement au-dessus du bord',lx:60,ly:68}]}},
+
+ trapeze:{vb:'0 0 320 190',
+  base:'<text x="10" y="18" class="cap">VUE DE CÔTÉ (benne basculante / ampliroll)</text>'+
+   '<path d="M34,52 L292,52 L262,150 L64,150 Z" class="steel2"/>'+
+   '<path d="M52,110 L274,110 L262,150 L64,150 Z" class="f1"/>'+
+   '<path d="M52,110 L274,110 L262,150 L64,150 Z" fill="url(#gr8)"/>'+
+   '<path d="M34,52 L292,52 L262,150 L64,150 Z" class="edge"/>'+
+   '<path d="M52,110 L274,110" class="edge"/>'+
+   '<circle cx="110" cy="166" r="13" fill="#2a3444"/><circle cx="220" cy="166" r="13" fill="#2a3444"/>'+GROUND,
+  segs:{
+   Lh:[{d:'M34,52 L292,52',lab:'longueur en haut',lx:120,ly:44}],
+   Lb:[{d:'M64,150 L262,150',lab:'longueur en bas',lx:120,ly:166}],
+   W:[{d:'M34,38 L292,38',lab:'largeur (mesurée en travers)',lx:70,ly:32}],
+   HB:[{d:'M292,52 L262,150',lab:'hauteur totale',lx:296,ly:106}],
+   HM:[{d:'M274,110 L262,150',lab:'hauteur matériau',lx:280,ly:140}],
+   HS:[{d:'M160,52 L160,26',lab:'dépassement',lx:170,ly:36}]}},
+
+ cylindre:{vb:'0 0 320 190',
+  base:GROUND+'<path d="M90,62 L90,152 A70,18 0 0 0 230,152 L230,62 Z" class="steel2"/>'+
+   '<path d="M90,96 L90,152 A70,18 0 0 0 230,152 L230,96 A70,18 0 0 1 90,96 Z" class="f1"/>'+
+   '<ellipse cx="160" cy="96" rx="70" ry="18" class="f2"/>'+
+   '<ellipse cx="160" cy="62" rx="70" ry="18" class="steel"/>'+
+   '<path d="M90,62 L90,152 M230,62 L230,152" class="edge"/><ellipse cx="160" cy="62" rx="70" ry="18" class="edge"/>'+
+   '<path d="M90,152 A70,18 0 0 0 230,152" class="edge"/>',
+  segs:{
+   D:[{d:'M90,62 L230,62',lab:'Ø intérieur',lx:160,ly:52}],
+   C:[{d:'M90,62 A70,18 0 1 0 230,62 A70,18 0 1 0 90,62',lab:'tour extérieur',lx:160,ly:36}],
+   H:[{d:'M230,96 L230,152',lab:'hauteur du matériau',lx:238,ly:128}]}},
+
+ godet:{vb:'0 0 320 190',
+  base:'<path d="M60,56 L250,56 L224,140 Q214,156 196,156 L96,156 Q78,156 72,140 Z" class="steel"/>'+
+   '<path d="M72,82 L238,82 L224,140 Q214,156 196,156 L96,156 Q78,156 72,140 Z" class="f1"/>'+
+   '<path d="M72,82 L238,82 L224,140 Q214,156 196,156 L96,156 Q78,156 72,140 Z" fill="url(#gr8)"/>'+
+   '<path d="M60,56 L250,56 L224,140 Q214,156 196,156 L96,156 Q78,156 72,140 Z" class="edge"/>'+
+   '<path d="M86,156 l-6,14 M126,156 l-4,14 M166,156 l-2,14 M206,156 l0,14" class="edge"/>'+
+   '<text x="252" y="104" class="lab">× N</text>',
+  segs:{N:[{d:'M60,44 L250,44',lab:'on compte les godets versés',lx:70,ly:36}]}}
+};
+
+/* ------------------------------------------------------------------ */
+/* DÉFINITION DES FORMES / CAS DE TERRAIN                               */
+/* ------------------------------------------------------------------ */
+const F=(k,label,o={})=>Object.assign({k,label,type:'num',multi:true,unit:'length'},o);
+const CH=(k,label,options,o={})=>Object.assign({k,label,type:'choice',options},o);
+
+const SHAPES={
+
+/* ---------------- SOL ---------------- */
+cone:{ctx:'sol',ico:'cone',name:'Tas en pointe (conique)',desc:'Un tas versé par une benne ou un tapis : rond à la base, pointu en haut.',
+ scene:'cone',
+ fields:[
+  CH('mb','Comment mesurer le tour du tas ?',[
+    {v:'C',l:'Faire le tour avec le mètre',d:'Le plus fiable : le tas n’est jamais parfaitement rond.'},
+    {v:'D',l:'Mesurer 2 diamètres croisés',d:'Si on peut traverser le tas au sol en passant par le milieu.'}],{anim:'C'}),
+  F('C','Tour du tas, au sol (circonférence)',{when:v=>v.mb!=='D',anim:'C',multi:false,
+    steps:['Pose le bout du mètre contre le pied du tas, à un endroit repérable (un caillou, un piquet).',
+           'Marche tout autour du tas en gardant le mètre bien au ras du sol, collé au pied du tas.',
+           'Reviens à ton point de départ et lis le chiffre : c’est le tour.']}),
+  F('D','Diamètres au sol (2 mesures croisées)',{when:v=>v.mb==='D',anim:'D',minN:2,
+    steps:['Mesure d’un pied du tas à l’autre, en passant par le milieu.',
+           'Recommence en te plaçant en croix (à 90°), car le tas n’est pas tout rond.',
+           'Entre les 2 chiffres : l’application fait la moyenne.']}),
+  CH('mh','Comment mesurer la hauteur ?',[
+    {v:'S',l:'Le long de la pente (recommandé)',d:'On ne peut pas tendre un mètre en l’air : on mesure sur le tas, du pied jusqu’au sommet.'},
+    {v:'H',l:'Hauteur verticale',d:'Seulement si tu as une perche, une mire ou un repère vertical fiable.'}],{anim:'S'}),
+  F('S','Longueur de la pente (du pied jusqu’au sommet)',{when:v=>v.mh!=='H',anim:'S',minN:2,
+    steps:['Pose le bout du mètre au pied du tas.',
+           'Fais monter le mètre bien à plat SUR la pente, en ligne droite, jusqu’à la pointe.',
+           'Fais-le 2 fois, sur 2 côtés différents : les pentes ne sont jamais identiques.']}),
+  F('H','Hauteur verticale du sommet',{when:v=>v.mh==='H',anim:'H',multi:false,
+    steps:['Plante une perche bien droite à côté du sommet (ou utilise un manche de pelle).',
+           'Repère sur la perche le niveau du sommet du tas.',
+           'Mesure de ce repère jusqu’au sol.']})],
+ calc(g){const L=[];let r;
+  if(g.raw.mb!=='D'){const C=g.m('C');r=C/(2*PI);
+    L.push(['Rayon du tas','r = tour ÷ (2 × π)',fmt(C,2)+' ÷ 6,2832 = <b>'+fmt(r,3)+' m</b>']);}
+  else{const D=g.m('D');r=D/2;L.push(['Rayon du tas','r = diamètre moyen ÷ 2',fmt(D,2)+' ÷ 2 = <b>'+fmt(r,3)+' m</b>']);}
+  let h;
+  if(g.raw.mh!=='H'){const S=g.m('S'); if(S<=r) return{err:'La pente mesurée ('+fmt(S,2)+' m) doit être plus grande que le rayon ('+fmt(r,2)+' m). Vérifie tes 2 mesures.'};
+    h=Math.sqrt(S*S-r*r);
+    L.push(['Hauteur (théorème de Pythagore)','h = √(pente² − rayon²)','√('+fmt(S,2)+'² − '+fmt(r,3)+'²) = <b>'+fmt(h,3)+' m</b>']);}
+  else{h=g.m('H');L.push(['Hauteur','h = mesure directe','<b>'+fmt(h,3)+' m</b>']);}
+  const V=PI*r*r*h/3;
+  L.push(['Volume du cône','V = π × r² × h ÷ 3','3,1416 × '+fmt(r,3)+'² × '+fmt(h,3)+' ÷ 3 = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Un cône contient <b>exactement 3 fois moins</b> qu’une boîte ronde (cylindre) de même base et même hauteur : c’est pour ça qu’on divise par 3. Le rayon vient du tour parce que le tour d’un cercle vaut toujours 2 × π × rayon. Et la hauteur se déduit de la pente avec Pythagore : la pente, le rayon et la hauteur forment un triangle rectangle.'};}
+},
+
+tronc:{ctx:'sol',ico:'tronc',name:'Tas rond à sommet plat',desc:'Tas conique dont le haut a été écrasé/aplani par un engin.',scene:'tronc',
+ fields:[
+  F('Db','Diamètre en bas (2 mesures croisées)',{anim:'Db',minN:2,
+   steps:['Mesure au sol d’un pied du tas à l’autre en passant par le milieu.','Recommence en croix (à 90°).']}),
+  F('Dh','Diamètre du plat, en haut (2 mesures croisées)',{anim:'Dh',minN:2,
+   steps:['Monte sur le plat (si c’est sûr) ou vise les bords.','Mesure la largeur du dessus dans un sens, puis en croix.']}),
+  CH('mh','Hauteur',[{v:'S',l:'Le long de la pente',d:'Du pied jusqu’au bord du plat.'},{v:'H',l:'Hauteur verticale',d:'Avec une perche.'}],{anim:'S'}),
+  F('S','Longueur de la pente (pied → bord du plat)',{when:v=>v.mh!=='H',anim:'S',minN:2,steps:['Pose le mètre au pied, monte bien droit sur la pente jusqu’au bord du dessus.','2 mesures sur 2 côtés.']}),
+  F('H','Hauteur verticale',{when:v=>v.mh==='H',anim:'H',multi:false,steps:['Perche verticale depuis le sol jusqu’au niveau du plat.']})],
+ calc(g){const R=g.m('Db')/2,r=g.m('Dh')/2,L=[];
+  L.push(['Rayons','R = Ø bas ÷ 2   et   r = Ø haut ÷ 2','R = '+fmt(R,3)+' m, r = '+fmt(r,3)+' m']);
+  let h;
+  if(g.raw.mh!=='H'){const S=g.m('S'),dx=R-r; if(S<=dx)return{err:'La pente doit être plus grande que (R − r). Vérifie les mesures.'};
+   h=Math.sqrt(S*S-dx*dx);
+   L.push(['Hauteur (Pythagore)','h = √(pente² − (R − r)²)','√('+fmt(S,2)+'² − '+fmt(dx,3)+'²) = <b>'+fmt(h,3)+' m</b>']);}
+  else{h=g.m('H');L.push(['Hauteur','mesure directe','<b>'+fmt(h,3)+' m</b>']);}
+  const V=PI*h/3*(R*R+R*r+r*r);
+  L.push(['Volume du tronc de cône','V = π × h ÷ 3 × (R² + R×r + r²)','3,1416 × '+fmt(h,3)+' ÷ 3 × ('+fmt(R,3)+'² + '+fmt(R,3)+'×'+fmt(r,3)+' + '+fmt(r,3)+'²) = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'C’est un cône à qui on a coupé la pointe. La formule officielle du <b>tronc de cône</b> tient compte des deux cercles (le grand en bas, le petit en haut) et de ce qu’il y a entre les deux. Si tu mets r = 0, tu retrouves exactement la formule du cône pointu.'};}
+},
+
+cordon:{ctx:'sol',ico:'cordon',name:'Tas allongé en dos d’âne (cordon / andain)',desc:'Matériau déchargé en avançant : long, pointu sur toute sa longueur, en pente aux 2 bouts.',scene:'cordon',
+ fields:[
+  F('L','Longueur totale au sol (d’un bout à l’autre)',{anim:'L',multi:false,steps:['Tends le mètre au sol, le long du tas, du tout début du pied jusqu’à la fin du pied.','Si le tas est courbé, suis sa courbe au sol.']}),
+  F('W','Largeur à la base (3 mesures)',{anim:'W',minN:3,steps:['Mesure en travers, d’un pied à l’autre, au début du tas.','Recommence au milieu.','Recommence à la fin. L’application fait la moyenne : la largeur n’est jamais constante.']}),
+  F('H','Hauteur (3 mesures)',{anim:'H',minN:3,steps:['Place une perche verticale contre la crête, mesure du sol jusqu’en haut.','Refais-le à 3 endroits : au début, au milieu, à la fin.']})],
+ calc(g){const L0=g.m('L'),W=g.m('W'),H=g.m('H');
+  if(L0<W)return{err:'La longueur doit être plus grande que la largeur : si ce n’est pas le cas, utilise la forme « Tas en pointe ».'};
+  const Vp=(L0-W)*W*H/2, Vc=PI*W*W*H/12, V=Vp+Vc, L=[];
+  L.push(['Surface de la coupe (triangle)','A = largeur × hauteur ÷ 2',fmt(W,2)+' × '+fmt(H,2)+' ÷ 2 = <b>'+fmt(W*H/2,3)+' m²</b>']);
+  L.push(['Partie droite du tas','V1 = A × (longueur − largeur)',fmt(W*H/2,3)+' × ('+fmt(L0,2)+' − '+fmt(W,2)+') = <b>'+fmt(Vp,3)+' m³</b>']);
+  L.push(['Les 2 bouts en pente (= 1 cône entier)','V2 = π × largeur² × hauteur ÷ 12','3,1416 × '+fmt(W,2)+'² × '+fmt(H,2)+' ÷ 12 = <b>'+fmt(Vc,3)+' m³</b>']);
+  L.push(['Volume total','V = V1 + V2',fmt(Vp,3)+' + '+fmt(Vc,3)+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Un cordon = <b>un long toit triangulaire</b> + <b>deux demi-cônes aux extrémités</b>. Les deux demi-cônes mis bout à bout font un cône complet : on l’ajoute une seule fois. C’est la méthode standard utilisée pour les andains et les cordons de compost.'};}
+},
+
+tasplat:{ctx:'sol',ico:'tasplat',name:'Tas allongé à dessus plat (en « pain »)',desc:'Gros stock régalé par un engin : dessus aplati, côtés en pente.',scene:'tasplat',
+ fields:[
+  F('Lb','Longueur en bas (au sol)',{anim:'Lb',minN:2,steps:['Mesure au sol, d’un pied à l’autre, dans la longueur.','Fais-le des 2 côtés du tas si les pieds ne sont pas parallèles.']}),
+  F('Wb','Largeur en bas (3 mesures)',{anim:'Wb',minN:3,steps:['En travers, d’un pied à l’autre : au début, au milieu, à la fin.']}),
+  F('Lh','Longueur du dessus plat',{anim:'Lh',minN:2,steps:['Sur le dessus, mesure la longueur du plat (là où la pente commence à descendre).']}),
+  F('Wh','Largeur du dessus plat (3 mesures)',{anim:'Wh',minN:3,steps:['Sur le dessus, mesure en travers : 3 endroits différents.']}),
+  F('H','Hauteur (3 mesures)',{anim:'H',minN:3,steps:['Perche verticale du sol jusqu’au niveau du plat, à 3 endroits.']})],
+ calc(g){const Lb=g.m('Lb'),Wb=g.m('Wb'),Lh=g.m('Lh'),Wh=g.m('Wh'),H=g.m('H');
+  const A1=Lb*Wb,A2=Lh*Wh,Lm=(Lb+Lh)/2,Wm=(Wb+Wh)/2,Am=Lm*Wm,V=H/6*(A1+4*Am+A2),L=[];
+  L.push(['Surface en bas','A1 = longueur bas × largeur bas',fmt(Lb,2)+' × '+fmt(Wb,2)+' = <b>'+fmt(A1,3)+' m²</b>']);
+  L.push(['Surface à mi-hauteur','Am = ((Lb+Lh)/2) × ((Wb+Wh)/2)',fmt(Lm,3)+' × '+fmt(Wm,3)+' = <b>'+fmt(Am,3)+' m²</b>']);
+  L.push(['Surface en haut','A2 = longueur haut × largeur haut',fmt(Lh,2)+' × '+fmt(Wh,2)+' = <b>'+fmt(A2,3)+' m²</b>']);
+  L.push(['Volume (formule du prismatoïde)','V = h ÷ 6 × (A1 + 4 × Am + A2)',fmt(H,2)+' ÷ 6 × ('+fmt(A1,2)+' + 4×'+fmt(Am,2)+' + '+fmt(A2,2)+') = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'On utilise la <b>formule du prismatoïde</b> (celle des terrassiers et des topographes). Elle donne le volume exact de toute forme dont le bas et le haut sont plats et les côtés droits : on pèse la surface du bas, 4 fois celle du milieu, et celle du haut, puis on divise par 6. Faire simplement (bas + haut) ÷ 2 donnerait un résultat faux.'};}
+},
+
+mur:{ctx:'sol',ico:'mur',name:'Tas contre un mur ou dans un angle',desc:'Tas adossé à un mur, une case de stockage ou coincé dans un coin.',scene:'mur',
+ fields:[
+  CH('fr','Le tas est adossé…',[{v:'2',l:'À un mur (demi-tas)',d:'Le tas est coupé en deux par le mur.'},
+    {v:'4',l:'Dans un angle (quart de tas)',d:'Deux murs forment un coin.'}],{anim:'Lm'}),
+  CH('mb','Mesure de la base',[{v:'Lm',l:'Longueur le long du mur',d:'= le diamètre. Le plus simple et le plus juste.'},
+    {v:'R',l:'Distance mur → pied du tas',d:'= le rayon. Si le pied suit mal le mur.'}],{anim:'Lm'}),
+  F('Lm','Longueur occupée le long du mur',{when:v=>v.mb!=='R',anim:'Lm',minN:1,steps:['Pose le mètre au ras du mur.','Mesure du premier point où le matériau touche le mur jusqu’au dernier.']}),
+  F('R','Distance du mur jusqu’au pied du tas (3 mesures)',{when:v=>v.mb==='R',anim:'R',minN:3,steps:['Pose le mètre contre le mur, perpendiculaire.','Mesure jusqu’au pied du tas. Recommence à 3 endroits.']}),
+  CH('mh','Hauteur',[{v:'H',l:'Hauteur verticale contre le mur',d:'Facile : le mur sert de règle.'},{v:'S',l:'Le long de la pente',d:'Si le sommet n’est pas contre le mur.'}],{anim:'H'}),
+  F('H','Hauteur du matériau contre le mur',{when:v=>v.mh!=='S',anim:'H',minN:2,steps:['Le mur est déjà vertical : mesure du sol jusqu’à la trace la plus haute du matériau sur le mur.']}),
+  F('S','Longueur de la pente',{when:v=>v.mh==='S',anim:'S',minN:2,steps:['Du pied du tas jusqu’au sommet, en suivant la pente.']})],
+ calc(g){const f=g.raw.fr==='4'?4:2,L=[];let r;
+  if(g.raw.mb!=='R'){const Lm=g.m('Lm');r=f===2?Lm/2:Lm;
+   L.push(['Rayon',f===2?'r = longueur le long du mur ÷ 2':'r = longueur le long du mur (dans un angle, c’est déjà le rayon)','<b>'+fmt(r,3)+' m</b>']);}
+  else{r=g.m('R');L.push(['Rayon','r = distance mur → pied','<b>'+fmt(r,3)+' m</b>']);}
+  let h; if(g.raw.mh!=='S'){h=g.m('H');L.push(['Hauteur','mesure directe','<b>'+fmt(h,3)+' m</b>']);}
+  else{const S=g.m('S'); if(S<=r)return{err:'La pente doit être plus grande que le rayon.'};h=Math.sqrt(S*S-r*r);
+   L.push(['Hauteur (Pythagore)','h = √(pente² − r²)','√('+fmt(S,2)+'² − '+fmt(r,3)+'²) = <b>'+fmt(h,3)+' m</b>']);}
+  const Vc=PI*r*r*h/3,V=Vc/f;
+  L.push(['Volume du cône entier','Vc = π × r² × h ÷ 3','3,1416 × '+fmt(r,3)+'² × '+fmt(h,3)+' ÷ 3 = <b>'+fmt(Vc,3)+' m³</b>']);
+  L.push(['On ne garde que le morceau réel','V = Vc ÷ '+f,fmt(Vc,3)+' ÷ '+f+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Le mur coupe le tas : contre un mur il reste <b>la moitié</b> d’un cône, dans un coin il reste <b>le quart</b>. On calcule donc le cône complet, puis on le divise par 2 ou par 4. Rien d’inventé : c’est le même cône, juste tranché.'};}
+},
+
+dome:{ctx:'sol',ico:'dome',name:'Tas bombé / en dôme (sans pointe)',desc:'Tas arrondi, écrasé, en forme de galette bombée (fréquent pour le sable humide, le compost).',scene:'dome',
+ fields:[
+  CH('mb','Mesure de la base',[{v:'C',l:'Tour du tas',d:'On fait le tour au sol.'},{v:'D',l:'2 diamètres croisés',d:'On traverse au sol.'}],{anim:'C'}),
+  F('C','Tour du tas au sol',{when:v=>v.mb!=='D',anim:'C',multi:false,steps:['Fais le tour complet du pied du tas avec le mètre au ras du sol.']}),
+  F('D','Diamètres croisés',{when:v=>v.mb==='D',anim:'D',minN:2,steps:['Un diamètre dans un sens, un autre en croix.']}),
+  F('H','Hauteur au point le plus haut',{anim:'H',minN:2,steps:['Perche verticale au centre, du sol jusqu’au sommet du dôme.']})],
+ calc(g){let r;const L=[];
+  if(g.raw.mb!=='D'){const C=g.m('C');r=C/(2*PI);L.push(['Rayon','r = tour ÷ (2 × π)',fmt(C,2)+' ÷ 6,2832 = <b>'+fmt(r,3)+' m</b>']);}
+  else{const D=g.m('D');r=D/2;L.push(['Rayon','r = Ø moyen ÷ 2','<b>'+fmt(r,3)+' m</b>']);}
+  const h=g.m('H'),V=PI*h/6*(3*r*r+h*h);
+  L.push(['Volume (calotte sphérique)','V = π × h ÷ 6 × (3 × r² + h²)','3,1416 × '+fmt(h,2)+' ÷ 6 × (3×'+fmt(r,3)+'² + '+fmt(h,2)+'²) = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Un tas bombé n’est pas un cône : ses flancs sont <b>arrondis</b>. La forme géométrique qui correspond s’appelle une <b>calotte sphérique</b> (une portion de boule posée au sol). Utiliser la formule du cône ici sous-estimerait le volume d’environ 30 %.'};}
+},
+
+sections:{ctx:'sol',ico:'sections',name:'Tas très irrégulier (méthode des tranches)',desc:'Tas déformé, bosselé, repris au chargeur : on le découpe en tranches régulières.',scene:'sections',
+ fields:[
+  F('L','Longueur totale du tas',{anim:'L',multi:false,steps:['Tends le mètre au sol sur toute la longueur du tas, du tout début à la toute fin.']}),
+  CH('nb','Nombre de tranches',[{v:'3',l:'3 tranches',d:'Rapide. Tas assez régulier.'},{v:'5',l:'5 tranches',d:'Recommandé.'},{v:'7',l:'7 tranches',d:'Tas très déformé.'}],{anim:'L'}),
+  CH('pf','Allure de la coupe',[{v:'tri',l:'Pointue (en V inversé)',d:'Flancs droits, crête nette.'},{v:'par',l:'Arrondie / bombée',d:'Crête arrondie, tassée.'}],{anim:'W'}),
+  {k:'SEC',type:'sections',label:'Mesures de chaque tranche',anim:'W',
+   steps:['Place-toi à la position de la tranche n°1 : c’est le tout début du tas (souvent largeur ≈ 0).',
+          'Mesure la LARGEUR du tas en travers, puis la HAUTEUR avec une perche, à cet endroit précis.',
+          'Avance d’un pas régulier jusqu’à la tranche suivante et recommence. La dernière tranche = la toute fin du tas.']}],
+ calc(g){const n=parseInt(g.raw.nb||'5'),L0=g.m('L'),rows=g.raw.SEC||[],fc=g.raw.pf==='par'?2/3:0.5,Ls=[];
+  const A=[];for(let i=0;i<n;i++){const w=pn((rows[i]||{}).w)*g.u,h=pn((rows[i]||{}).h)*g.u;
+   if(!isFinite(w)||!isFinite(h))return{err:'Il manque les mesures de la tranche n°'+(i+1)+'.'};A.push(fc*w*h);}
+  const d=L0/(n-1);let s=A[0]+A[n-1];for(let i=1;i<n-1;i++)s+=(i%2?4:2)*A[i];
+  const V=d/3*s;
+  Ls.push(['Distance entre 2 tranches','d = longueur ÷ (nombre de tranches − 1)',fmt(L0,2)+' ÷ '+(n-1)+' = <b>'+fmt(d,3)+' m</b>']);
+  Ls.push(['Surface de chaque coupe',g.raw.pf==='par'?'A = 2/3 × largeur × hauteur (coupe arrondie)':'A = largeur × hauteur ÷ 2 (coupe pointue)',
+    A.map((a,i)=>'A'+(i+1)+' = '+fmt(a,3)+' m²').join('  ·  ')]);
+  Ls.push(['Volume (règle de Simpson)','V = d ÷ 3 × (A1 + 4A2 + 2A3 + 4A4 + … + A'+n+')',fmt(d,3)+' ÷ 3 × '+fmt(s,3)+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L:Ls,why:'C’est la méthode des topographes : on découpe le tas en <b>tranches régulières</b> comme un pain de mie, on calcule la surface de chaque tranche, puis on les recolle. La <b>règle de Simpson</b> (les coefficients 4 et 2) épouse les courbes du tas au lieu de supposer qu’il est droit entre deux tranches : c’est ce qui la rend précise sur un tas bosselé.'};}
+},
+
+grille:{ctx:'sol',ico:'grille',name:'Tas informe (méthode du quadrillage)',desc:'La méthode la plus sûre quand rien n’a de forme : on quadrille le sol et on mesure une hauteur par carreau.',scene:'grille',
+ fields:[
+  F('a','Côté A d’un carreau (dans la longueur)',{anim:'a',multi:false,steps:['Choisis un pas régulier : 1 m, c’est parfait.','Marque les carreaux au sol (craie, pointes, cordeau).']}),
+  F('b','Côté B d’un carreau (dans la largeur)',{anim:'b',multi:false,steps:['Même chose dans l’autre sens. Souvent identique au côté A.']}),
+  CH('cols','Nombre de carreaux dans la longueur',[{v:'2',l:'2'},{v:'3',l:'3'},{v:'4',l:'4'},{v:'5',l:'5'},{v:'6',l:'6'}],{anim:'a'}),
+  CH('rows','Nombre de carreaux dans la largeur',[{v:'2',l:'2'},{v:'3',l:'3'},{v:'4',l:'4'},{v:'5',l:'5'}],{anim:'b'}),
+  {k:'G',type:'grid',label:'Hauteur mesurée au centre de chaque carreau',anim:'H',scene:'perche',
+   steps:['Va au centre du premier carreau.','Plante la perche bien droite jusqu’à toucher le sol et lis la hauteur du matériau à cet endroit.',
+          'Si un carreau est vide, écris 0. Remplis tous les carreaux, ligne par ligne.']}],
+ calc(g){const a=g.m('a'),b=g.m('b'),c=parseInt(g.raw.cols||'4'),r=parseInt(g.raw.rows||'3'),hs=g.raw.G||[];
+  let s=0,nb=0;for(let i=0;i<c*r;i++){const v=pn(hs[i]); if(isFinite(v)){s+=v*g.u;nb++;}}
+  if(nb<c*r) return{err:'Il manque '+(c*r-nb)+' hauteur(s) dans le quadrillage (écris 0 pour un carreau vide).'};
+  const cell=a*b,V=cell*s,L=[];
+  L.push(['Surface d’un carreau','A = côté A × côté B',fmt(a,2)+' × '+fmt(b,2)+' = <b>'+fmt(cell,3)+' m²</b>']);
+  L.push(['Somme de toutes les hauteurs','Σh = h1 + h2 + … + h'+(c*r),'<b>'+fmt(s,3)+' m</b> (moyenne '+fmt(s/(c*r),3)+' m)']);
+  L.push(['Volume total','V = surface d’un carreau × somme des hauteurs',fmt(cell,3)+' × '+fmt(s,3)+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Chaque carreau est traité comme une <b>petite colonne droite</b> : sa surface multipliée par sa hauteur. On additionne toutes les colonnes. Comme on multiplie toutes les hauteurs par la même surface, cela revient à faire surface × somme des hauteurs. Plus les carreaux sont petits, plus le résultat colle au vrai tas : c’est la <b>méthode des prismes</b>, celle utilisée en topographie avant les drones.'};}
+},
+
+couche:{ctx:'sol',ico:'couche',name:'Matériau étalé en couche',desc:'Sable, grave ou terre régalé au sol sur une surface : on mesure la surface et l’épaisseur.',scene:'couche',
+ fields:[
+  CH('fo','Forme de la surface couverte',[
+    {v:'rect',l:'Rectangle / carré',d:'Allée, plateforme, dalle.'},
+    {v:'quad',l:'Quadrilatère de travers',d:'4 côtés mais rien n’est d’équerre.'},
+    {v:'tri',l:'Triangle',d:'Coin de parcelle.'},
+    {v:'cer',l:'Rond',d:'Zone circulaire.'}],{anim:'L'}),
+  F('L','Longueur (3 mesures)',{when:v=>(v.fo||'rect')==='rect',anim:'L',minN:3,steps:['Mesure la longueur au début, au milieu, à la fin de la zone : les bords ne sont jamais parallèles.']}),
+  F('W','Largeur (3 mesures)',{when:v=>(v.fo||'rect')==='rect',anim:'W',minN:3,steps:['Pareil en travers : 3 mesures à des endroits différents.']}),
+  F('q1','Côté 1',{when:v=>v.fo==='quad',anim:'L',multi:false,steps:['Numérote les 4 coins A, B, C, D dans le sens des aiguilles d’une montre.','Côté 1 = de A à B.']}),
+  F('q2','Côté 2 (B→C)',{when:v=>v.fo==='quad',anim:'W',multi:false,steps:['Mesure de B à C.']}),
+  F('q3','Côté 3 (C→D)',{when:v=>v.fo==='quad',anim:'L',multi:false,steps:['Mesure de C à D.']}),
+  F('q4','Côté 4 (D→A)',{when:v=>v.fo==='quad',anim:'W',multi:false,steps:['Mesure de D à A.']}),
+  F('qd','Diagonale (A→C)',{when:v=>v.fo==='quad',anim:'L',multi:false,steps:['Traverse la zone en diagonale, du coin A au coin C.','C’est cette mesure qui permet de couper la surface en 2 triangles exacts.']}),
+  F('t1','Côté 1',{when:v=>v.fo==='tri',anim:'L',multi:false}),
+  F('t2','Côté 2',{when:v=>v.fo==='tri',anim:'W',multi:false}),
+  F('t3','Côté 3',{when:v=>v.fo==='tri',anim:'L',multi:false}),
+  F('Dc','Diamètre de la zone ronde (2 mesures croisées)',{when:v=>v.fo==='cer',anim:'L',minN:2}),
+  F('E','Épaisseur de la couche (au moins 4 points)',{anim:'E',minN:4,
+   steps:['Enfonce une tige ou un tournevis jusqu’au sol dur, bien droit.','Pince avec le doigt au niveau du dessus et mesure la partie enfoncée.',
+          'Fais-le à 4 endroits différents (y compris là où c’est le plus mince) : l’application fait la moyenne.']})],
+ calc(g){const L=[];let A=0,f=g.raw.fo||'rect';
+  if(f==='rect'){const l=g.m('L'),w=g.m('W');A=l*w;L.push(['Surface','A = longueur moyenne × largeur moyenne',fmt(l,2)+' × '+fmt(w,2)+' = <b>'+fmt(A,3)+' m²</b>']);}
+  else if(f==='cer'){const r=g.m('Dc')/2;A=PI*r*r;L.push(['Surface du rond','A = π × r²','3,1416 × '+fmt(r,3)+'² = <b>'+fmt(A,3)+' m²</b>']);}
+  else if(f==='tri'){const a=g.m('t1'),b=g.m('t2'),c=g.m('t3');A=heron(a,b,c);
+   if(!isFinite(A))return{err:'Ces 3 côtés ne peuvent pas former un triangle. Vérifie les mesures.'};
+   L.push(['Surface (formule de Héron)','p = (a+b+c)/2 ; A = √(p(p−a)(p−b)(p−c))','= <b>'+fmt(A,3)+' m²</b>']);}
+  else{const a=g.m('q1'),b=g.m('q2'),c=g.m('q3'),d=g.m('q4'),e=g.m('qd');
+   const A1=heron(a,b,e),A2=heron(c,d,e); if(!isFinite(A1)||!isFinite(A2))return{err:'Les côtés et la diagonale ne sont pas cohérents. Revérifie la diagonale.'};
+   A=A1+A2;L.push(['Triangle 1 (côtés 1, 2 et diagonale)','formule de Héron','<b>'+fmt(A1,3)+' m²</b>']);
+   L.push(['Triangle 2 (côtés 3, 4 et diagonale)','formule de Héron','<b>'+fmt(A2,3)+' m²</b>']);
+   L.push(['Surface totale','A = triangle 1 + triangle 2','<b>'+fmt(A,3)+' m²</b>']);}
+  const e=g.m('E'),V=A*e;
+  L.push(['Épaisseur moyenne','e = moyenne de tes relevés','<b>'+fmt(e,3)+' m</b>']);
+  L.push(['Volume','V = surface × épaisseur moyenne',fmt(A,3)+' × '+fmt(e,3)+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Une couche étalée, c’est une <b>galette</b> : on prend la surface au sol et on la multiplie par l’épaisseur. Comme le sol n’est jamais plat, l’épaisseur change partout : c’est pour ça qu’on en prend plusieurs et qu’on fait la moyenne. Pour un terrain de travers, on le coupe en 2 triangles avec la diagonale — un triangle dont on connaît les 3 côtés a toujours une surface exacte (formule de Héron, vieille de 2000 ans).'};}
+},
+
+tranchee:{ctx:'sol',ico:'tranchee',name:'Tranchée / fouille / excavation',desc:'Volume de terre sortie (ou de remblai à livrer) pour une saignée.',scene:'tranchee',
+ fields:[
+  F('L','Longueur de la tranchée',{anim:'L',multi:false,steps:['Suis la tranchée au sol avec le mètre, d’un bout à l’autre.','Si elle tourne, mesure chaque portion droite séparément.']}),
+  F('Wh','Largeur en haut (3 mesures)',{anim:'W',minN:3,steps:['Mesure d’un bord à l’autre, au niveau du sol : au début, au milieu, à la fin.']}),
+  CH('tal','Les parois sont…',[{v:'droit',l:'Droites (verticales)',d:'Tranchée blindée ou terrain tenant.'},{v:'pente',l:'En pente (talutées)',d:'Les bords se sont éboulés / ont été ouverts en V.'}],{anim:'W'}),
+  F('Wb','Largeur au fond (3 mesures)',{when:v=>v.tal==='pente',anim:'W',minN:3,steps:['Mesure la largeur tout au fond de la tranchée, à 3 endroits.']}),
+  F('P','Profondeur (au moins 3 mesures)',{anim:'P',minN:3,steps:['Pose une règle en travers, à plat sur le sol.','Mesure de la règle jusqu’au fond, bien verticalement, à 3 endroits.']})],
+ calc(g){const l=g.m('L'),wh=g.m('Wh'),wb=g.raw.tal==='pente'?g.m('Wb'):wh,p=g.m('P');
+  const wm=(wh+wb)/2,A=wm*p,V=A*l,L=[];
+  L.push(['Largeur moyenne','w = (largeur haut + largeur fond) ÷ 2','('+fmt(wh,2)+' + '+fmt(wb,2)+') ÷ 2 = <b>'+fmt(wm,3)+' m</b>']);
+  L.push(['Surface de la coupe','A = largeur moyenne × profondeur',fmt(wm,3)+' × '+fmt(p,2)+' = <b>'+fmt(A,3)+' m²</b>']);
+  L.push(['Volume','V = A × longueur',fmt(A,3)+' × '+fmt(l,2)+' = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'Une tranchée est un <b>long couloir</b> : on calcule la surface de sa coupe, puis on la tire sur toute la longueur. Quand les parois sont en pente, la coupe est un trapèze, et la surface d’un trapèze = (grand côté + petit côté) ÷ 2 × hauteur. Attention : la terre sortie gonfle (foisonnement) — utilise l’onglet Convertir.'};}
+},
+
+/* ---------------- BENNE / CONTENANTS ---------------- */
+benne:{ctx:'benne',ico:'benne',name:'Benne / caisson / remorque droite',desc:'Benne à parois verticales : benne à gravats, caisson, remorque, plateau à ridelles.',scene:'benne',
+ fields:[
+  F('L','Longueur intérieure (2 mesures)',{anim:'L',minN:2,steps:['Mesure À L’INTÉRIEUR de la benne, d’une paroi à l’autre, le long du bord haut.','Refais-le de l’autre côté : les bennes sont souvent déformées.']}),
+  F('W','Largeur intérieure (3 mesures)',{anim:'W',minN:3,steps:['Mesure en travers, à l’intérieur : à l’avant, au milieu, à l’arrière.','Les flancs sont presque toujours bombés par les chocs.']}),
+  CH('mr','Comment est rempli le matériau ?',[
+   {v:'vide',l:'Je mesure le vide depuis le bord haut',d:'Le plus rapide et le plus juste : on mesure ce qui MANQUE.'},
+   {v:'haut',l:'Je mesure la hauteur du matériau',d:'Si la benne est basse ou peu remplie.'}],{anim:'HV'}),
+  F('HB','Hauteur intérieure de la benne (fond → bord haut)',{when:v=>(v.mr||'vide')==='vide',anim:'HB',minN:2,
+   steps:['Mesure du fond de la benne jusqu’au bord haut, à l’intérieur.','C’est une donnée fixe : tu pourras l’enregistrer pour ne plus la remesurer.']}),
+  F('HV','Vide entre le bord haut et le matériau (4 points)',{when:v=>(v.mr||'vide')==='vide',anim:'HV',minN:4,
+   steps:['Pose une règle droite en travers du bord haut de la benne.','Mesure de la règle jusqu’au matériau, bien verticalement.',
+          'Fais-le aux 4 coins (et au milieu si le chargement est creusé) : la charge est toujours en pente.']}),
+  F('HM','Hauteur du matériau (4 points)',{when:v=>v.mr==='haut',anim:'HM',minN:4,
+   steps:['Plante la règle jusqu’au fond de la benne.','Lis la hauteur du matériau. Recommence aux 4 coins.']}),
+  CH('sur','Le matériau dépasse-t-il du bord ?',[
+   {v:'non',l:'Non, il est sous le bord'},
+   {v:'toit',l:'Oui, en dos d’âne (sur la longueur)',d:'Une crête d’un bout à l’autre de la benne.'},
+   {v:'pyr',l:'Oui, en tas central (pointu)',d:'Un seul tas au milieu.'}],{anim:'HS'}),
+  F('HS','Hauteur du dépassement au-dessus du bord',{when:v=>v.sur&&v.sur!=='non',anim:'HS',minN:2,
+   steps:['Pose la règle à plat en travers des 2 bords hauts.','Mesure de la règle jusqu’au point le plus haut du matériau.']})],
+ calc(g){const l=g.m('L'),w=g.m('W');const L=[];let h;
+  if((g.raw.mr||'vide')==='vide'){const hb=g.m('HB'),hv=g.m('HV');h=hb-hv;
+   if(h<=0)return{err:'Le vide mesuré ('+fmt(hv,2)+' m) est plus grand que la hauteur de la benne : vérifie les mesures.'};
+   L.push(['Hauteur du matériau','h = hauteur de la benne − vide moyen',fmt(hb,2)+' − '+fmt(hv,3)+' = <b>'+fmt(h,3)+' m</b>']);}
+  else{h=g.m('HM');L.push(['Hauteur moyenne du matériau','moyenne de tes 4 relevés','<b>'+fmt(h,3)+' m</b>']);}
+  const Vc=l*w*h;
+  L.push(['Volume dans la benne','V1 = longueur × largeur × hauteur',fmt(l,2)+' × '+fmt(w,2)+' × '+fmt(h,3)+' = <b>'+fmt(Vc,3)+' m³</b>']);
+  let Vs=0;
+  if(g.raw.sur&&g.raw.sur!=='non'){const hs=g.m('HS');
+   if(g.raw.sur==='toit'){Vs=l*w*hs/2;L.push(['Dépassement en dos d’âne','V2 = longueur × largeur × hauteur ÷ 2 (prisme triangulaire)',fmt(l,2)+' × '+fmt(w,2)+' × '+fmt(hs,2)+' ÷ 2 = <b>'+fmt(Vs,3)+' m³</b>']);}
+   else{Vs=l*w*hs/3;L.push(['Dépassement en tas central','V2 = longueur × largeur × hauteur ÷ 3 (pyramide)',fmt(l,2)+' × '+fmt(w,2)+' × '+fmt(hs,2)+' ÷ 3 = <b>'+fmt(Vs,3)+' m³</b>']);}
+   L.push(['Volume total','V = V1 + V2',fmt(Vc,3)+' + '+fmt(Vs,3)+' = <b>'+fmtv(Vc+Vs)+' m³</b>']);}
+  return{V:Vc+Vs,L,why:'Une benne droite, c’est une <b>boîte</b> : longueur × largeur × hauteur. La vraie difficulté est la hauteur, car la charge n’est jamais plate — on mesure donc le <b>vide</b> en 4 points depuis le bord (une référence droite et fiable) et on le retire de la hauteur de la benne. Pour la partie qui dépasse : une crête sur toute la longueur remplit exactement la <b>moitié</b> de la boîte qui l’entoure, un tas pointu en remplit le <b>tiers</b>. Ce sont les volumes exacts du prisme triangulaire et de la pyramide.'};}
+},
+
+trapeze:{ctx:'benne',ico:'trapeze',name:'Benne basculante / ampliroll (parois inclinées)',desc:'Benne de camion TP, ampliroll, multibenne : plus large en haut qu’en bas.',scene:'trapeze',
+ fields:[
+  F('Lh','Longueur intérieure EN HAUT',{anim:'Lh',minN:2,steps:['Mesure à l’intérieur, le long du bord supérieur, d’une paroi à l’autre.']}),
+  F('Lb','Longueur intérieure AU FOND',{anim:'Lb',minN:2,steps:['Mesure au fond de la benne, d’une paroi à l’autre.','Si l’avant et l’arrière sont droits, c’est la même valeur qu’en haut.']}),
+  F('W','Largeur intérieure (3 mesures)',{anim:'W',minN:3,steps:['En travers, à l’intérieur : à l’avant, au milieu, à l’arrière.']}),
+  F('HB','Hauteur intérieure totale (fond → bord haut)',{anim:'HB',minN:2,steps:['Mesure verticalement du fond jusqu’au bord haut.','Donnée fixe de ta benne : enregistre-la.']}),
+  F('HM','Hauteur du matériau (4 points)',{anim:'HM',minN:4,steps:['Règle en travers du bord haut, mesure le vide jusqu’au matériau.','Hauteur du matériau = hauteur totale − vide. Ici, entre directement la hauteur du matériau si tu la connais, sinon utilise le mode « benne droite ».','Relève 4 points : avant, arrière, et les 2 côtés.']}),
+  CH('sur','Le matériau dépasse-t-il du bord ?',[{v:'non',l:'Non'},{v:'toit',l:'Oui, en dos d’âne'},{v:'pyr',l:'Oui, en tas central'}],{anim:'HS'}),
+  F('HS','Hauteur du dépassement',{when:v=>v.sur&&v.sur!=='non',anim:'HS',minN:2,steps:['Règle à plat sur les 2 bords, mesure jusqu’au sommet du matériau.']})],
+ calc(g){const lh=g.m('Lh'),lb=g.m('Lb'),w=g.m('W'),hb=g.m('HB'),hm=g.m('HM'),L=[];
+  if(hm>hb)return{err:'La hauteur du matériau dépasse la hauteur de la benne. Utilise le champ « dépassement » pour la partie au-dessus du bord.'};
+  const lAtH=lb+(lh-lb)*(hm/hb),Am=(lb+lAtH)/2*hm,Vc=Am*w;
+  L.push(['Longueur au niveau du matériau','L(h) = L bas + (L haut − L bas) × (h ÷ H)',fmt(lb,2)+' + ('+fmt(lh,2)+' − '+fmt(lb,2)+') × ('+fmt(hm,2)+' ÷ '+fmt(hb,2)+') = <b>'+fmt(lAtH,3)+' m</b>']);
+  L.push(['Surface de la coupe (trapèze)','A = (L bas + L(h)) ÷ 2 × h','('+fmt(lb,2)+' + '+fmt(lAtH,3)+') ÷ 2 × '+fmt(hm,2)+' = <b>'+fmt(Am,3)+' m²</b>']);
+  L.push(['Volume dans la benne','V1 = A × largeur',fmt(Am,3)+' × '+fmt(w,2)+' = <b>'+fmt(Vc,3)+' m³</b>']);
+  let Vs=0;
+  if(g.raw.sur&&g.raw.sur!=='non'){const hs=g.m('HS');
+   Vs=g.raw.sur==='toit'?lh*w*hs/2:lh*w*hs/3;
+   L.push(['Dépassement',g.raw.sur==='toit'?'V2 = L haut × largeur × h ÷ 2':'V2 = L haut × largeur × h ÷ 3','<b>'+fmt(Vs,3)+' m³</b>']);
+   L.push(['Volume total','V = V1 + V2','<b>'+fmtv(Vc+Vs)+' m³</b>']);}
+  return{V:Vc+Vs,L,why:'Les parois penchées font que la benne est <b>plus étroite en bas</b> : à mi-remplissage, la longueur utile n’est pas celle du haut. On calcule donc d’abord la longueur réelle au niveau atteint par le matériau (règle de proportion, la paroi étant plane), puis la surface du <b>trapèze</b> ainsi formé, et on la multiplie par la largeur. Prendre bêtement la longueur du haut surestimerait la livraison.'};}
+},
+
+cylindre:{ctx:'benne',ico:'cylindre',name:'Cuve, silo, fût, big bag rond',desc:'Contenant cylindrique rempli partiellement ou totalement.',scene:'cylindre',
+ fields:[
+  CH('mb','Mesure du diamètre',[{v:'D',l:'Diamètre intérieur',d:'Mètre posé en travers de l’ouverture.'},{v:'C',l:'Tour extérieur',d:'Si on ne peut pas traverser : on fait le tour.'}],{anim:'D'}),
+  F('D','Diamètre intérieur (2 mesures croisées)',{when:v=>(v.mb||'D')==='D',anim:'D',minN:2,steps:['Mesure en passant par le centre, d’une paroi intérieure à l’autre.','Recommence en croix.']}),
+  F('C','Tour extérieur',{when:v=>v.mb==='C',anim:'C',multi:false,steps:['Ceinture le contenant avec le mètre, bien à l’horizontale.']}),
+  F('EP','Épaisseur de la paroi',{when:v=>v.mb==='C',anim:'C',multi:false,steps:['Mesure l’épaisseur de la paroi au bord (souvent 2 à 5 mm pour une cuve, 1 à 3 cm pour du béton).']}),
+  F('H','Hauteur du matériau (3 mesures)',{anim:'H',minN:3,steps:['Plonge une tige jusqu’au fond, bien verticale.','Lis la partie mouillée / salie : c’est la hauteur du contenu.','Recommence 3 fois, le contenu n’est pas plat.']})],
+ calc(g){let r,L=[];
+  if((g.raw.mb||'D')==='D'){r=g.m('D')/2;L.push(['Rayon intérieur','r = Ø ÷ 2','<b>'+fmt(r,3)+' m</b>']);}
+  else{const C=g.m('C'),e=g.m('EP');r=C/(2*PI)-e;
+   L.push(['Rayon intérieur','r = (tour ÷ 2π) − épaisseur de paroi','('+fmt(C,2)+' ÷ 6,2832) − '+fmt(e,3)+' = <b>'+fmt(r,3)+' m</b>']);}
+  const h=g.m('H'),A=PI*r*r,V=A*h;
+  L.push(['Surface du fond','A = π × r²','3,1416 × '+fmt(r,3)+'² = <b>'+fmt(A,3)+' m²</b>']);
+  L.push(['Volume','V = A × hauteur',fmt(A,3)+' × '+fmt(h,3)+' = <b>'+fmtv(V)+' m³</b>'+' (= '+fmt(V*1000,0)+' litres)']);
+  return{V,L,why:'Un cylindre, c’est un <b>disque qu’on empile</b> : la surface du rond multipliée par la hauteur remplie. Rappel utile : 1 m³ = 1000 litres.'};}
+},
+
+godet:{ctx:'benne',ico:'godet',name:'Comptage de godets / brouettes',desc:'Estimation rapide quand on charge ou décharge avec un engin : on compte les passes.',scene:'godet',
+ fields:[
+  {k:'N',type:'num',unit:'none',multi:false,label:'Nombre de godets (ou de brouettes) versés',anim:'N',
+   steps:['Compte chaque godet versé pendant la réception.','N’oublie pas le dernier godet souvent partiel : compte-le à part en ajustant le taux de remplissage.']},
+  {k:'CAP',type:'num',unit:'none',multi:false,label:'Capacité du godet en m³ (plaque constructeur)',anim:'N',
+   steps:['La capacité est gravée sur le godet ou indiquée dans la notice de l’engin (ex. 0,25 m³ pour une mini-pelle, 1,8 m³ pour une chargeuse).',
+          'Prends la capacité « à ras » si tu comptes des godets pleins arasés, la capacité « en dôme » si tu comptes des godets bien bombés.']},
+  {k:'TX',type:'num',unit:'none',multi:false,label:'Taux de remplissage moyen (%)',def:'90',anim:'N',
+   steps:['Un godet n’est presque jamais plein à 100 %.','Matériau fin et sec : 95 %. Matériau grossier, caillouteux : 80 à 85 %. Charge en dôme : 105 %.']}],
+ calc(g){const n=pn((g.raw.N||[])[0]),c=pn((g.raw.CAP||[])[0]),t=pn((g.raw.TX||[])[0]);
+  if(!isFinite(n)||!isFinite(c)||!isFinite(t))return{err:'Remplis les 3 champs.'};
+  const V=n*c*t/100,L=[];
+  L.push(['Volume','V = nombre × capacité × taux ÷ 100',fmt(n,0)+' × '+fmt(c,2)+' × '+fmt(t,0)+' ÷ 100 = <b>'+fmtv(V)+' m³</b>']);
+  return{V,L,why:'C’est la méthode de contrôle rapide utilisée en carrière : on multiplie le nombre de passes par le volume réellement contenu dans le godet. Elle reste une <b>estimation</b> (± 10 %) : pour une réception contestée, mesure plutôt le tas ou la benne.'};}
+}
+};
+function heron(a,b,c){const p=(a+b+c)/2,x=p*(p-a)*(p-b)*(p-c);return x>0?Math.sqrt(x):NaN;}
+
+/* ------------------------------------------------------------------ */
+/* ÉTAT                                                                 */
+/* ------------------------------------------------------------------ */
+const st={
+  screen:'home', ctx:null, shape:null, vals:{}, step:0,
+  unit:LS.get('unit','m'), theme:LS.get('theme','dark'), guided:LS.get('guided',true),
+  mat:LS.get('mat',null), hist:LS.get('hist',[]), tot:LS.get('tot',[]),
+  presets:LS.get('presets',{}), vids:LS.get('vids',{}), last:LS.get('last',null)
+};
+document.documentElement.dataset.theme=st.theme;
+const UF=()=>st.unit==='cm'?0.01:1;
+
+/* ----- accès aux valeurs ----- */
+function arr(k){const a=st.vals[k];return Array.isArray(a)?a:[]}
+function nums(k){return arr(k).map(pn).filter(isFinite)}
+function mean(k){const n=nums(k);return n.length?n.reduce((a,b)=>a+b,0)/n.length*UF():NaN}
+function gbag(pick){ // pick: 'avg'|'min'|'max'
+  return {u:UF(),raw:st.vals,
+   m(k){const n=nums(k);if(!n.length)return NaN;
+    const v=pick==='min'?Math.min(...n):pick==='max'?Math.max(...n):n.reduce((a,b)=>a+b,0)/n.length;
+    return v*UF();}};
+}
+function visFields(sh){return sh.fields.filter(f=>!f.when||f.when(st.vals))}
+function missing(sh){
+  const miss=[];
+  visFields(sh).forEach(f=>{
+   if(f.type==='choice'){if(!st.vals[f.k])miss.push(f.label);}
+   else if(f.type==='grid'){const c=parseInt(st.vals.cols||'4'),r=parseInt(st.vals.rows||'3');
+    const h=st.vals.G||[];let ok=0;for(let i=0;i<c*r;i++)if(isFinite(pn(h[i])))ok++;if(ok<c*r)miss.push(f.label);}
+   else if(f.type==='sections'){const n=parseInt(st.vals.nb||'5'),rw=st.vals.SEC||[];
+    for(let i=0;i<n;i++){const o=rw[i]||{};if(!isFinite(pn(o.w))||!isFinite(pn(o.h))){miss.push('tranche n°'+(i+1));break;}}}
+   else if(!nums(f.k).length)miss.push(f.label);
+  });
+  return miss;
+}
+function result(){
+  const sh=SHAPES[st.shape]; if(!sh)return null;
+  const miss=missing(sh); if(miss.length)return{miss};
+  let r; try{r=sh.calc(gbag('avg'));}catch(e){return{err:'Erreur de calcul, vérifie tes chiffres.'}}
+  if(r.err)return r;
+  // fourchette selon la dispersion des relevés
+  let lo=null,hi=null;
+  const multi=visFields(sh).some(f=>nums(f.k).length>1);
+  if(multi){try{const a=sh.calc(gbag('min')),b=sh.calc(gbag('max'));
+    if(a&&b&&isFinite(a.V)&&isFinite(b.V)){lo=Math.min(a.V,b.V);hi=Math.max(a.V,b.V);}}catch(e){}}
+  return Object.assign({},r,{lo,hi});
+}
+
+/* ------------------------------------------------------------------ */
+/* ANIMATIONS                                                           */
+/* ------------------------------------------------------------------ */
+function sceneOf(shapeId,field){
+  const sid=(field&&field.scene)?field.scene:(SHAPES[shapeId]?SHAPES[shapeId].scene:shapeId);
+  return SC[sid]||SC[shapeId]||null;
+}
+function animHTML(shapeId,field,tag){
+  const sc=sceneOf(shapeId,field); if(!sc)return '';
+  const segs=(field&&field.anim&&sc.segs[field.anim])?sc.segs[field.anim]:[];
+  const n=Math.max(segs.length,1),cyc=+(n*1.7+1).toFixed(2);
+  let g='';
+  segs.forEach((s,i)=>{
+    const t0=+( (i*1.7)/cyc ).toFixed(4), t1=+( (i*1.7+1.2)/cyc ).toFixed(4);
+    const kt='0;'+t0+';'+t1+';1';
+    g+='<path d="'+s.d+'" class="mline" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">'+
+       '<animate attributeName="stroke-dashoffset" values="100;100;0;0" keyTimes="'+kt+'" dur="'+cyc+'s" repeatCount="indefinite"/></path>'+
+       '<circle r="6.5" class="mdot"><animateMotion path="'+s.d+'" dur="'+cyc+'s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="'+kt+'"/></circle>';
+    if(s.lab) g+='<text x="'+s.lx+'" y="'+s.ly+'" class="lab" opacity="0">'+esc(s.lab)+
+       '<animate attributeName="opacity" values="0;0;1;1" keyTimes="'+kt+'" dur="'+cyc+'s" repeatCount="indefinite"/></text>';
+  });
+  return '<div class="anim"><span class="tag">'+esc(tag||'Animation — comment mesurer')+'</span>'+
+    '<svg viewBox="'+sc.vb+'" preserveAspectRatio="xMidYMid meet">'+DEFS+sc.base+g+'</svg></div>';
+}
+function thumb(id){const sc=SC[(SHAPES[id]&&SHAPES[id].scene)||id];if(!sc)return '';
+ return '<svg viewBox="'+sc.vb+'" preserveAspectRatio="xMidYMid meet">'+DEFS+sc.base+'</svg>';}
+
+/* ------------------------------------------------------------------ */
+/* RENDU                                                                */
+/* ------------------------------------------------------------------ */
+function render(){
+  const T={home:'CUBIX',list:st.ctx==='sol'?'Sur le sol':'Benne & contenants',
+   measure:SHAPES[st.shape]?SHAPES[st.shape].name:'',total:'Total du chantier',hist:'Historique',conv:'Convertir',help:'Aide & méthode'}[st.screen]||'CUBIX';
+  $('#ttl').innerHTML=esc(T)+'<span class="sub">'+esc({home:'Calcul de volume réel — m³',list:'Choisis ce qui ressemble le plus à la réalité',
+   measure:'Mesure guidée',total:'Additionne plusieurs mesures',hist:'Tes calculs enregistrés',conv:'m³ ⇄ tonnes, foisonnement',help:'Tout comprendre'}[st.screen]||'')+'</span>';
+  $('#back').style.display=st.screen==='home'?'none':'grid';
+  $('#unit').textContent=st.unit;
+  const A=$('#app');
+  A.innerHTML={home:vHome,list:vList,measure:vMeasure,total:vTotal,hist:vHist,conv:vConv,help:vHelp}[st.screen]();
+  $('#dock').innerHTML=st.screen==='measure'?vDock():'';
+  $('#nav').innerHTML=['measure','mesurer','📐','home|list|measure','em']
+   .length?vNav():'';
+  if(st.screen==='measure'&&st.guided){const el=document.querySelector('.field.active');if(el&&st._scroll){el.scrollIntoView({block:'center',behavior:'smooth'});}}
+  st._scroll=false;
+}
+function vNav(){
+  const it=[['home','Mesurer','📐',['home','list','measure']],['total','Total','Σ',['total']],
+   ['hist','Historique','🕘',['hist']],['conv','Convertir','⚖️',['conv']],['help','Aide','🎓',['help']]];
+  return it.map(([s,l,e,on])=>'<button data-act="go" data-s="'+s+'" class="'+(on.indexOf(st.screen)>=0?'on':'')+'"><em>'+e+'</em>'+l+'</button>').join('');
+}
+/* ---- HOME ---- */
+function vHome(){
+  const tot=st.tot.reduce((a,b)=>a+b.V,0);
+  let h='<div class="wrap">';
+  h+='<div class="hero"><b>Que mesures-tu ?</b><div class="hint" style="margin-top:4px">Choisis la situation la plus proche de ce que tu as devant toi. Rien n’est droit sur un chantier : l’application te fera prendre plusieurs mesures et fera les moyennes toute seule.</div></div>';
+  h+='<div class="big2">'+
+   '<button class="tile" data-act="ctx" data-c="sol"><span class="em">⛰️</span><b>Sur le sol</b><span>Tas, cordon, couche étalée, tranchée, stock informe</span></button>'+
+   '<button class="tile" data-act="ctx" data-c="benne"><span class="em">🚛</span><b>Benne & contenants</b><span>Benne, remorque, ampliroll, cuve, godets</span></button></div>';
+  if(st.last&&SHAPES[st.last.shape]){
+   h+='<h2 class="sec">Reprendre</h2><button class="row" data-act="reopen"><div class="thumb">'+thumb(st.last.shape)+'</div>'+
+    '<div><b>'+esc(SHAPES[st.last.shape].name)+'</b><small>Dernier calcul : '+fmtv(st.last.V)+' m³</small></div><span class="chevron">›</span></button>';}
+  h+='<h2 class="sec">Accès rapide</h2><div class="list">'+
+   '<button class="row" data-act="go" data-s="total"><div class="thumb" style="font-size:22px">Σ</div><div><b>Total du chantier</b><small>'+st.tot.length+' mesure(s) · '+fmtv(tot)+' m³</small></div><span class="chevron">›</span></button>'+
+   '<button class="row" data-act="go" data-s="conv"><div class="thumb" style="font-size:20px">⚖️</div><div><b>m³ → tonnes · foisonnement</b><small>Contrôler le bon de livraison</small></div><span class="chevron">›</span></button>'+
+   '<button class="row" data-act="go" data-s="help"><div class="thumb" style="font-size:20px">🎓</div><div><b>Apprendre à mesurer</b><small>Les 7 règles d’or + le vocabulaire expliqué</small></div><span class="chevron">›</span></button></div>';
+  h+='<div class="card" style="margin-top:14px"><div class="hint"><b>Astuce vitesse :</b> enregistre les dimensions de tes bennes habituelles. À la livraison suivante, tu ne mesures plus que le vide depuis le bord : résultat en 10 secondes.</div></div>';
+  return h+'</div>';
+}
+/* ---- LISTE ---- */
+function vList(){
+  const ids=Object.keys(SHAPES).filter(k=>SHAPES[k].ctx===st.ctx);
+  let h='<div class="wrap"><div class="hint" style="padding:4px 2px">Regarde le dessin : prends celui qui ressemble le plus à ce que tu vois. En cas de doute sur un tas déformé, prends <b>« méthode du quadrillage »</b>, c’est la plus sûre.</div><div class="list">';
+  ids.forEach(id=>{const s=SHAPES[id];
+   h+='<button class="row" data-act="open" data-id="'+id+'"><div class="thumb">'+thumb(id)+'</div>'+
+    '<div><b>'+esc(s.name)+'</b><small>'+esc(s.desc)+'</small></div><span class="chevron">›</span></button>';});
+  return h+'</div></div>';
+}
+/* ---- MESURE ---- */
+function vMeasure(){
+  const sh=SHAPES[st.shape],vf=visFields(sh);
+  if(st.step>=vf.length)st.step=vf.length-1; if(st.step<0)st.step=0;
+  let h='<div class="wrap">';
+  h+='<div class="seg" style="margin:6px 0"><button data-act="mode" data-m="1" class="'+(st.guided?'on':'')+'">🎓 Guidé (avec animation)</button>'+
+      '<button data-act="mode" data-m="0" class="'+(!st.guided?'on':'')+'">⚡ Rapide</button></div>';
+  const pr=st.presets[st.shape]||[];
+  if(pr.length){h+='<div class="chips">'+pr.map((p,i)=>'<button class="chip" data-act="loadpre" data-i="'+i+'">📌 '+esc(p.n)+'</button>').join('')+
+   '<button class="chip" data-act="delpre">🗑 gérer</button></div>';}
+  h+='<div class="cols"><div class="wrap">';
+  if(st.guided){
+   h+='<div class="prog">'+vf.map((f,i)=>'<i class="'+(i<=st.step?'on':'')+'"></i>').join('')+'</div>';
+   h+=fieldHTML(vf[st.step],st.step,vf.length,true);
+   h+='<div class="bar">'+(st.step>0?'<button class="btn g" data-act="prev">‹ Précédent</button>':'')+
+    (st.step<vf.length-1?'<button class="btn p" data-act="next">Suivant ›</button>':'<button class="btn p" data-act="finish">✔ Terminer</button>')+'</div>';
+  }else{
+   vf.forEach((f,i)=>{h+=fieldHTML(f,i,vf.length,false);});
+  }
+  h+='</div><div class="wrap">';
+  if(!st.guided){
+    const sc=sceneOf(st.shape,null);
+    if(sc)h+=animHTML(st.shape,{anim:null},'Vue d’ensemble');
+  }
+  h+='<div class="card"><b style="font-size:14px">Matériau (facultatif)</b>'+
+   '<div class="hint" style="margin:6px 0 8px">Sert à convertir le m³ en tonnes pour contrôler le bon de livraison.</div>'+
+   '<button class="btn g full" data-act="pickmat">'+(st.mat?esc(st.mat.n)+' — '+fmt(st.mat.d,2)+' t/m³':'Choisir un matériau')+'</button></div>';
+  h+='</div></div>';
+  return h+'</div>';
+}
+function fieldHTML(f,i,n,guided){
+  if(!f)return '';
+  const act=guided?' active':'';
+  let h='<div class="field'+act+'" data-f="'+f.k+'">';
+  h+='<div class="flabel"><span class="num">'+(i+1)+'</span><b>'+esc(f.label)+'</b>'+
+     '<button class="q" data-act="why" data-f="'+f.k+'">?</button></div>';
+  if(guided||f.type==='grid'||f.type==='sections'){
+    h+=animHTML(st.shape,f,'Étape '+(i+1)+'/'+n+' — regarde puis refais le geste');
+    if(f.steps)h+='<ul class="steps">'+f.steps.map((s,j)=>'<li><i>'+(j+1)+'.</i><span>'+esc(s)+'</span></li>').join('')+'</ul>';
+    const v=st.vids[st.shape+'.'+f.k];
+    if(v)h+='<video src="'+esc(v)+'" controls playsinline loop></video>';
+  }
+  if(f.type==='choice'){
+    h+='<div class="list">'+f.options.map(o=>
+      '<button class="row" data-act="choice" data-k="'+f.k+'" data-v="'+o.v+'" style="'+(st.vals[f.k]===o.v?'border-color:var(--acc);background:#ff8a3d14':'')+'">'+
+      '<div><b>'+esc(o.l)+'</b>'+(o.d?'<small>'+esc(o.d)+'</small>':'')+'</div>'+
+      '<span class="chevron">'+(st.vals[f.k]===o.v?'✔':'›')+'</span></button>').join('')+'</div>';
+  }
+  else if(f.type==='grid'){
+    const c=parseInt(st.vals.cols||'4'),r=parseInt(st.vals.rows||'3'),hs=st.vals.G||[];
+    h+='<div class="gridh">';
+    for(let y=0;y<r;y++){h+='<div class="gr-row">';
+      for(let x=0;x<c;x++){const idx=y*c+x;
+        h+='<input inputmode="decimal" data-act="grid" data-i="'+idx+'" value="'+esc(hs[idx]||'')+'" placeholder="h'+(idx+1)+'">';}
+      h+='</div>';}
+    h+='</div><div class="hint">Hauteur en '+st.unit+' au centre de chaque carreau. Carreau vide = 0.</div>';
+  }
+  else if(f.type==='sections'){
+    const nn=parseInt(st.vals.nb||'5'),rw=st.vals.SEC||[];
+    for(let i2=0;i2<nn;i2++){const o=rw[i2]||{};
+      h+='<div class="sr"><span>T'+(i2+1)+'</span>'+
+       '<input inputmode="decimal" data-act="sec" data-i="'+i2+'" data-p="w" value="'+esc(o.w||'')+'" placeholder="largeur">'+
+       '<input inputmode="decimal" data-act="sec" data-i="'+i2+'" data-p="h" value="'+esc(o.h||'')+'" placeholder="hauteur">'+
+       '</div>';}
+    h+='<div class="hint">Largeur et hauteur en '+st.unit+'. Tranche 1 = tout début du tas, dernière tranche = toute fin (souvent 0).</div>';
+  }
+  else{
+    const a=arr(f.k),u=f.unit==='none'?'':st.unit;
+    const list=a.length?a:[f.def||''];
+    list.forEach((v,j)=>{
+      h+='<div class="inp"><input inputmode="decimal" data-act="num" data-k="'+f.k+'" data-i="'+j+'" value="'+esc(v)+'" placeholder="0">'+
+       '<span class="u">'+u+'</span>'+(list.length>1?'<button class="del" data-act="rm" data-k="'+f.k+'" data-i="'+j+'">✕</button>':'')+'</div>';});
+    if(f.multi!==false){
+      h+='<button class="addbtn" data-act="add" data-k="'+f.k+'">+ ajouter une mesure'+(f.minN&&list.length<f.minN?' (conseillé : '+f.minN+')':'')+'</button>';
+      const ns=nums(f.k);
+      if(ns.length>1){const mn=Math.min(...ns),mx=Math.max(...ns),mo=ns.reduce((a,b)=>a+b,0)/ns.length;
+        h+='<div class="avg">Moyenne retenue : '+fmt(mo,2)+' '+u+' (de '+fmt(mn,2)+' à '+fmt(mx,2)+')</div>';}
+    }
+  }
+  return h+'</div>';
+}
+function vDock(){
+  const r=result();
+  let v='—',m='',cls='';
+  if(!r){v='—';}
+  else if(r.miss){v='—';m='Il manque : '+esc(r.miss.slice(0,2).join(', '))+(r.miss.length>2?'…':'');}
+  else if(r.err){v='—';m='<span style="color:var(--err)">'+esc(r.err)+'</span>';}
+  else{
+    v=fmtv(r.V)+'<small> m³</small>';
+    const bits=[];
+    if(r.lo!==null&&isFinite(r.lo)&&(r.hi-r.lo)>0.004)bits.push('fourchette '+fmtv(r.lo)+' à '+fmtv(r.hi)+' m³');
+    if(st.mat)bits.push('<b>≈ '+fmt(r.V*st.mat.d,2)+' t</b> de '+esc(st.mat.n.toLowerCase()));
+    bits.push(fmt(r.V*1000,0)+' L');
+    m=bits.join(' · ');
+  }
+  return '<div class="dock"><div class="res"><div style="flex:1;min-width:0"><div class="v">'+v+'</div><div class="m">'+m+'</div></div>'+
+   '<button class="btn p" data-act="explain">Comment ?</button></div>'+
+   '<div class="bar"><button class="btn g" data-act="addtot">+ Au total</button>'+
+   '<button class="btn g" data-act="save">💾 Enregistrer</button>'+
+   '<button class="btn g" data-act="savepre">📌 Benne</button>'+
+   '<button class="btn g" data-act="reset">↺ Effacer</button></div></div>';
+}
+/* ---- TOTAL ---- */
+function vTotal(){
+  if(!st.tot.length)return '<div class="empty">Aucune mesure ajoutée.<br>Pendant une réception, mesure chaque tas puis appuie sur <b>+ Au total</b> : l’application additionne tout.</div>';
+  const t=st.tot.reduce((a,b)=>a+b.V,0);
+  let h='<div class="wrap"><div class="card"><div class="hint">Total cumulé</div><div style="font-size:36px;font-weight:900">'+fmtv(t)+' <small style="font-size:17px;color:var(--mut)">m³</small></div>'+
+   (st.mat?'<div class="hint">≈ '+fmt(t*st.mat.d,2)+' tonnes de '+esc(st.mat.n.toLowerCase())+'</div>':'')+'</div><div class="card">';
+  st.tot.forEach((x,i)=>{h+='<div class="kv"><span>'+esc(x.n)+'</span><b>'+fmtv(x.V)+' m³ <button class="del" data-act="rmtot" data-i="'+i+'">✕</button></b></div>';});
+  h+='</div><button class="btn g full" data-act="cleartot">Vider le total</button></div>';
+  return h;
+}
+/* ---- HISTORIQUE ---- */
+function vHist(){
+  if(!st.hist.length)return '<div class="empty">Rien d’enregistré pour l’instant.</div>';
+  let h='<div class="wrap"><div class="card">';
+  st.hist.forEach((x,i)=>{h+='<div class="kv"><span>'+esc(x.n)+'<br><span class="pill">'+esc(x.d)+'</span></span><b>'+fmtv(x.V)+' m³ <button class="del" data-act="rmh" data-i="'+i+'">✕</button></b></div>';});
+  h+='</div><button class="btn g full" data-act="export">⇩ Exporter en CSV</button></div>';
+  return h;
+}
+/* ---- CONVERTIR ---- */
+function vConv(){
+  const V=pn(st._cv||'')||0,d=st.mat?st.mat.d:1.5;
+  let h='<div class="wrap"><div class="card"><b>Volume → poids</b>'+
+   '<div class="inp" style="margin-top:8px"><input inputmode="decimal" data-act="cv" value="'+esc(st._cv||'')+'" placeholder="0"><span class="u">m³</span></div>'+
+   '<button class="btn g full" style="margin-top:8px" data-act="pickmat">'+(st.mat?esc(st.mat.n)+' — '+fmt(d,2)+' t/m³':'Choisir un matériau')+'</button>'+
+   '<div class="calc" style="margin-top:10px"><div class="t">Calcul</div><div class="f">poids = volume × masse volumique</div>'+
+   '<div class="r">'+fmt(V,2)+' m³ × '+fmt(d,2)+' t/m³ = <b>'+fmt(V*d,2)+' tonnes</b></div></div>'+
+   '<div class="warn">Les masses volumiques sont des valeurs usuelles pour du matériau <b>en vrac</b>. L’humidité peut les faire varier de 10 à 25 %. Le bon de livraison fait foi.</div></div>';
+  h+='<div class="card"><b>Foisonnement</b><div class="hint" style="margin:6px 0 10px">Un matériau extrait gonfle. 10 m³ de terre en place donnent plus de 10 m³ dans la benne : c’est normal, ce n’est pas une erreur de mesure.</div><table class="tb">'+
+   FOIS.map(f=>'<tr><td>'+esc(f.n)+'</td><td>+'+f.k+' %</td><td>'+fmt(V*(1+f.k/100),2)+' m³</td></tr>').join('')+'</table>'+
+   '<div class="hint" style="margin-top:8px">Colonne de droite : ce que deviendraient '+fmt(V,2)+' m³ en place une fois foisonnés.</div></div>';
+  h+='<div class="card"><b>Équivalences utiles</b><table class="tb">'+
+   '<tr><td>1 m³</td><td>1 000 litres</td></tr><tr><td>1 m³</td><td>1 000 dm³</td></tr>'+
+   '<tr><td>'+fmt(V,2)+' m³</td><td>'+fmt(V*1000,0)+' litres</td></tr>'+
+   '<tr><td>Big bag courant</td><td>≈ 0,5 m³</td></tr><tr><td>Brouette de chantier</td><td>≈ 0,09 m³</td></tr>'+
+   '<tr><td>Benne 8 m³ arasée</td><td>8 m³</td></tr></table></div>';
+  return h+'</div>';
+}
+/* ---- AIDE ---- */
+function vHelp(){
+  return '<div class="wrap">'+
+  '<div class="card"><b style="font-size:16px">Les 7 règles d’or</b><ul class="steps" style="margin-top:8px">'+
+  ['Mesure toujours <b>plusieurs fois</b> la même dimension à des endroits différents : rien n’est régulier. L’application fait la moyenne.',
+   'Garde le mètre <b>bien tendu et droit</b>. Un mètre qui pend donne une mesure trop grande.',
+   'Pour une hauteur, utilise une <b>règle posée en travers</b> comme référence horizontale, et mesure vers le bas.',
+   'Dans une benne, mesure <b>toujours à l’intérieur</b>, jamais les dimensions extérieures.',
+   'Mesure le <b>vide</b> plutôt que le plein quand c’est possible : le bord de la benne est une référence droite et fiable.',
+   'Note tes mesures en <b>mètres avec décimales</b> (1,45 m) ou bascule en cm en haut à droite.',
+   'En cas de doute sur une forme bizarre : <b>quadrillage</b>. C’est plus long mais c’est la vérité.']
+   .map((s,i)=>'<li><i>'+(i+1)+'.</i><span>'+s+'</span></li>').join('')+'</ul></div>'+
+  '<div class="card"><b style="font-size:16px">Le vocabulaire, simplement</b><table class="tb">'+
+   [['Volume','La place que prend le matériau. On le compte en mètres cubes (m³).'],
+    ['1 m³','Un cube de 1 m de long, 1 m de large, 1 m de haut. Environ 11 brouettes.'],
+    ['Diamètre (Ø)','La largeur d’un rond en passant par le milieu.'],
+    ['Circonférence','Le tour complet d’un rond.'],
+    ['Rayon','La moitié du diamètre : du centre jusqu’au bord.'],
+    ['Pente (génératrice)','La ligne qui monte du pied du tas jusqu’au sommet, en suivant le flanc.'],
+    ['Arase','Le niveau du bord haut de la benne.'],
+    ['Foisonnement','Le gonflement d’un matériau quand on l’extrait et qu’on le charge.'],
+    ['Masse volumique','Le poids d’un mètre cube, en tonnes par m³.']]
+   .map(r=>'<tr><td><b>'+r[0]+'</b></td><td style="text-align:left;font-weight:400">'+r[1]+'</td></tr>').join('')+'</table></div>'+
+  '<div class="card"><b style="font-size:16px">Ajouter tes propres vidéos</b>'+
+   '<div class="hint" style="margin:6px 0 10px">Tu peux filmer tes gestes réels et les attacher à une étape : la vidéo s’affichera sous l’animation, à chaque fois. Colle l’adresse d’un fichier vidéo (mp4) ou le chemin d’un fichier placé à côté de l’application.</div>'+
+   '<button class="btn g full" data-act="vidmgr">🎬 Gérer les vidéos</button></div>'+
+  '<div class="card"><b style="font-size:16px">Précision attendue</b><table class="tb">'+
+   [['Benne (parois droites)','± 3 à 5 %'],['Benne inclinée','± 5 %'],['Tas conique','± 5 à 8 %'],
+    ['Tas en cordon','± 8 %'],['Tas informe au quadrillage','± 3 à 6 %'],['Comptage de godets','± 10 à 15 %']]
+   .map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table>'+
+   '<div class="hint" style="margin-top:8px">La précision dépend surtout du <b>nombre de relevés</b> que tu prends, pas de la formule. 4 hauteurs valent toujours mieux qu’une.</div></div>'+
+  '<div class="card"><b style="font-size:16px">Installer sur le téléphone</b><div class="hint" style="margin-top:6px">Ouvre cette page dans le navigateur, puis « Ajouter à l’écran d’accueil ». Elle s’ouvrira en plein écran comme une vraie application, et elle fonctionne sans réseau.</div></div>'+
+  '</div>';
+}
+
+/* ------------------------------------------------------------------ */
+/* FEUILLES (sheets)                                                    */
+/* ------------------------------------------------------------------ */
+function sheet(html){$('#pan').innerHTML='<div class="grab"></div>'+html;$('#sheet').classList.add('open');}
+function closeSheet(){$('#sheet').classList.remove('open');}
+
+function sheetExplain(){
+  const r=result(),sh=SHAPES[st.shape];
+  if(!r||r.miss){sheet('<h3>Il manque des mesures</h3><div class="hint">'+esc((r&&r.miss||[]).join(', '))+'</div>');return;}
+  if(r.err){sheet('<h3>Vérification</h3><div class="warn">'+esc(r.err)+'</div>');return;}
+  let h='<h3 style="margin:0 0 4px">'+esc(sh.name)+'</h3><div class="hint" style="margin-bottom:12px">Voici exactement comment le résultat a été obtenu, avec <b>tes</b> chiffres.</div>';
+  // mesures saisies
+  h+='<div class="calc"><div class="t">1 · Tes mesures</div>';
+  visFields(sh).forEach(f=>{
+    if(f.type==='choice'){const o=f.options.find(x=>x.v===st.vals[f.k]);if(o)h+='<div class="r">'+esc(f.label)+' → '+esc(o.l)+'</div>';}
+    else if(f.type==='grid'||f.type==='sections'){h+='<div class="r">'+esc(f.label)+' : saisi</div>';}
+    else{const n=nums(f.k);if(n.length)h+='<div class="r">'+esc(f.label)+' : '+n.map(x=>fmt(x,2)).join(' ; ')+' '+(f.unit==='none'?'':st.unit)+
+      (n.length>1?' → moyenne '+fmt(n.reduce((a,b)=>a+b,0)/n.length,3):'')+'</div>';}
+  });
+  h+='</div>';
+  r.L.forEach((row,i)=>{h+='<div class="calc"><div class="t">'+(i+2)+' · '+esc(row[0])+'</div><div class="f">'+esc(row[1])+'</div><div class="r">'+row[2]+'</div></div>';});
+  h+='<div class="why"><b>Pourquoi ça marche :</b> '+r.why+'</div>';
+  if(r.lo!==null&&isFinite(r.lo)&&(r.hi-r.lo)>0.004){
+    h+='<div class="warn" style="margin-top:10px"><b>Fourchette :</b> en prenant tes plus petites mesures on obtient '+fmtv(r.lo)+' m³, avec les plus grandes '+fmtv(r.hi)+' m³. '+
+    'L’écart vient des irrégularités du tas. Si l’écart te paraît trop grand, ajoute des relevés.</div>';}
+  if(st.mat)h+='<div class="calc" style="margin-top:10px"><div class="t">Poids estimé</div><div class="f">poids = volume × masse volumique</div>'+
+   '<div class="r">'+fmtv(r.V)+' × '+fmt(st.mat.d,2)+' = <b>'+fmt(r.V*st.mat.d,2)+' tonnes</b></div></div>';
+  h+='<button class="btn p full" style="margin-top:14px" data-act="closeSheet">J’ai compris</button>';
+  sheet(h);
+}
+function sheetWhy(k){
+  const sh=SHAPES[st.shape],f=sh.fields.find(x=>x.k===k); if(!f)return;
+  let h='<h3 style="margin:0 0 8px">'+esc(f.label)+'</h3>';
+  h+=animHTML(st.shape,f,'Regarde le geste');
+  if(f.steps)h+='<ul class="steps" style="margin:12px 0">'+f.steps.map((s,i)=>'<li><i>'+(i+1)+'.</i><span>'+esc(s)+'</span></li>').join('')+'</ul>';
+  const v=st.vids[st.shape+'.'+f.k];
+  if(v)h+='<video src="'+esc(v)+'" controls playsinline loop></video>';
+  else h+='<button class="btn g full" data-act="addvid" data-k="'+k+'">🎬 Attacher ma propre vidéo à cette étape</button>';
+  if(f.minN>1)h+='<div class="warn" style="margin-top:10px">Prends au moins <b>'+f.minN+' mesures</b> à des endroits différents : c’est ce qui rend le résultat fiable sur du matériau irrégulier.</div>';
+  h+='<button class="btn p full" style="margin-top:12px" data-act="closeSheet">Fermer</button>';
+  sheet(h);
+}
+function sheetMat(){
+  const gs=[...new Set(MATS.map(m=>m.g))];
+  let h='<h3 style="margin:0 0 10px">Matériau livré</h3>';
+  gs.forEach(g=>{h+='<h2 class="sec">'+esc(g)+'</h2><div class="list">'+
+   MATS.filter(m=>m.g===g).map(m=>'<button class="row" data-act="setmat" data-n="'+esc(m.n)+'" data-d="'+m.d+'">'+
+    '<div><b>'+esc(m.n)+'</b><small>'+fmt(m.d,2)+' tonne par m³</small></div>'+
+    '<span class="chevron">'+(st.mat&&st.mat.n===m.n?'✔':'›')+'</span></button>').join('')+'</div>';});
+  h+='<button class="btn g full" style="margin-top:14px" data-act="nomat">Aucun matériau</button>';
+  sheet(h);
+}
+function sheetVid(){
+  let h='<h3 style="margin:0 0 8px">Mes vidéos</h3><div class="hint" style="margin-bottom:10px">Une vidéo par étape. Elle apparaîtra sous l’animation.</div>';
+  const ks=Object.keys(st.vids);
+  if(ks.length)h+='<div class="card" style="margin-bottom:10px">'+ks.map(k=>'<div class="kv"><span>'+esc(k)+'</span><b><button class="del" data-act="rmvid" data-k="'+esc(k)+'">✕</button></b></div>').join('')+'</div>';
+  else h+='<div class="hint">Aucune vidéo pour l’instant. Ouvre une étape de mesure, appuie sur « ? » puis sur « Attacher ma propre vidéo ».</div>';
+  h+='<button class="btn p full" style="margin-top:12px" data-act="closeSheet">Fermer</button>';
+  sheet(h);
+}
+
+/* ------------------------------------------------------------------ */
+/* ÉVÉNEMENTS                                                           */
+/* ------------------------------------------------------------------ */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const a=b.dataset.act;
+  switch(a){
+   case 'go': st.screen=b.dataset.s; render(); break;
+   case 'ctx': st.ctx=b.dataset.c; st.screen='list'; render(); break;
+   case 'open': st.shape=b.dataset.id; st.vals={}; st.step=0; st.screen='measure'; render(); break;
+   case 'reopen': st.shape=st.last.shape; st.vals=JSON.parse(JSON.stringify(st.last.vals||{})); st.step=0; st.screen='measure'; render(); break;
+   case 'mode': st.guided=b.dataset.m==='1'; LS.set('guided',st.guided); render(); break;
+   case 'choice': st.vals[b.dataset.k]=b.dataset.v; if(st.guided)st.step=Math.min(st.step+1,visFields(SHAPES[st.shape]).length-1); st._scroll=true; render(); break;
+   case 'add': {const k=b.dataset.k; const l=arr(k); if(!l.length)l.push(''); l.push(''); st.vals[k]=l; render(); break;}
+   case 'rm': {const k=b.dataset.k,l=arr(k); l.splice(+b.dataset.i,1); st.vals[k]=l; render(); break;}
+   case 'prev': st.step=Math.max(0,st.step-1); st._scroll=true; render(); break;
+   case 'next': st.step=Math.min(visFields(SHAPES[st.shape]).length-1,st.step+1); st._scroll=true; render(); break;
+   case 'finish': st.guided=false; render(); break;
+   case 'explain': sheetExplain(); break;
+   case 'why': sheetWhy(b.dataset.f); break;
+   case 'closeSheet': closeSheet(); break;
+   case 'pickmat': sheetMat(); break;
+   case 'setmat': st.mat={n:b.dataset.n,d:+b.dataset.d}; LS.set('mat',st.mat); closeSheet(); render(); break;
+   case 'nomat': st.mat=null; LS.set('mat',null); closeSheet(); render(); break;
+   case 'reset': st.vals={}; st.step=0; render(); break;
+   case 'addtot': {const r=result(); if(!r||r.miss||r.err){alert('Termine les mesures d’abord.');break;}
+     st.tot.push({n:SHAPES[st.shape].name,V:r.V}); LS.set('tot',st.tot); b.textContent='✔ ajouté'; setTimeout(render,700); break;}
+   case 'rmtot': st.tot.splice(+b.dataset.i,1); LS.set('tot',st.tot); render(); break;
+   case 'cleartot': st.tot=[]; LS.set('tot',st.tot); render(); break;
+   case 'save': {const r=result(); if(!r||r.miss||r.err){alert('Termine les mesures d’abord.');break;}
+     st.hist.unshift({n:SHAPES[st.shape].name+(st.mat?' · '+st.mat.n:''),V:r.V,d:new Date().toLocaleString('fr-FR')});
+     st.hist=st.hist.slice(0,80); LS.set('hist',st.hist);
+     st.last={shape:st.shape,vals:st.vals,V:r.V}; LS.set('last',st.last);
+     b.textContent='✔'; setTimeout(render,700); break;}
+   case 'rmh': st.hist.splice(+b.dataset.i,1); LS.set('hist',st.hist); render(); break;
+   case 'export': {const rows=[['Date','Mesure','m3']].concat(st.hist.map(x=>[x.d,x.n,fmt(x.V,3)]));
+     const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+     const u=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
+     const a2=document.createElement('a'); a2.href=u; a2.download='cubix.csv'; a2.click(); URL.revokeObjectURL(u); break;}
+   case 'savepre': {const n=prompt('Nom de cette benne / contenant (ex. « Benne 8 m³ bleue ») :'); if(!n)break;
+     const p=st.presets[st.shape]||[]; p.push({n,v:JSON.parse(JSON.stringify(st.vals))});
+     st.presets[st.shape]=p; LS.set('presets',st.presets); render(); break;}
+   case 'loadpre': {const p=st.presets[st.shape][+b.dataset.i]; st.vals=JSON.parse(JSON.stringify(p.v)); render(); break;}
+   case 'delpre': {const p=st.presets[st.shape]||[]; const n=prompt('Numéro à supprimer (1 à '+p.length+') :'); const i=parseInt(n)-1;
+     if(i>=0&&i<p.length){p.splice(i,1); st.presets[st.shape]=p; LS.set('presets',st.presets); render();} break;}
+   case 'vidmgr': sheetVid(); break;
+   case 'addvid': {const u=prompt('Adresse de ta vidéo (fichier .mp4, ou chemin local) :'); if(!u)break;
+     st.vids[st.shape+'.'+b.dataset.k]=u; LS.set('vids',st.vids); sheetWhy(b.dataset.k); break;}
+   case 'rmvid': delete st.vids[b.dataset.k]; LS.set('vids',st.vids); sheetVid(); break;
+  }
+});
+$('#back').onclick=()=>{
+  if(st.screen==='measure'){st.screen='list';}
+  else if(st.screen==='list'){st.screen='home';}
+  else st.screen='home';
+  render();
+};
+$('#unit').onclick=()=>{st.unit=st.unit==='m'?'cm':'m';LS.set('unit',st.unit);render();};
+$('#theme').onclick=()=>{st.theme=st.theme==='dark'?'light':'dark';LS.set('theme',st.theme);document.documentElement.dataset.theme=st.theme;render();};
+
+document.addEventListener('input',e=>{
+  const t=e.target,a=t.dataset.act;
+  if(a==='num'){const k=t.dataset.k,i=+t.dataset.i,l=arr(k).slice(); while(l.length<=i)l.push(''); l[i]=t.value; st.vals[k]=l;
+   $('#dock').innerHTML=vDock(); updAvg(k); }
+  else if(a==='grid'){const g=(st.vals.G||[]).slice(); g[+t.dataset.i]=t.value; st.vals.G=g; $('#dock').innerHTML=vDock();}
+  else if(a==='sec'){const s=(st.vals.SEC||[]).slice(); const i=+t.dataset.i; s[i]=Object.assign({},s[i]||{}); s[i][t.dataset.p]=t.value; st.vals.SEC=s; $('#dock').innerHTML=vDock();}
+  else if(a==='cv'){st._cv=t.value; const sc=$('#app').scrollTop; $('#app').innerHTML=vConv(); $('#app').scrollTop=sc; const inp=document.querySelector('[data-act="cv"]'); if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);} }
+});
+function updAvg(k){
+  const f=document.querySelector('.field[data-f="'+k+'"]'); if(!f)return;
+  const el=f.querySelector('.avg'); const ns=nums(k);
+  if(ns.length>1){const mn=Math.min(...ns),mx=Math.max(...ns),mo=ns.reduce((a,b)=>a+b,0)/ns.length;
+    const txt='Moyenne retenue : '+fmt(mo,2)+' '+st.unit+' (de '+fmt(mn,2)+' à '+fmt(mx,2)+')';
+    if(el)el.textContent=txt; else{const d=document.createElement('div');d.className='avg';d.textContent=txt;f.appendChild(d);} }
+  else if(el)el.remove();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.tagName==='INPUT'){
+    const ins=[...document.querySelectorAll('main input')],i=ins.indexOf(e.target);
+    if(i>=0&&i<ins.length-1){ins[i+1].focus();ins[i+1].select();}
+    else if(st.guided){const b2=document.querySelector('[data-act="next"]');if(b2)b2.click();}
+    else e.target.blur();
+  }
+});
+render();
+</script>
+</body>
+</html>
+
