@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CubagePro — Mesure Réelle Matériaux & Benne</title>
+    <!-- Typographie Inter pour une lisibilité maximale sur chantier -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==========================================================================
+           VARIABLES & DESIGN TOKENS (THÈME SOMBRE CHANTIER HAUTE VISIBILITÉ)
+           ========================================================================== */
+        :root {
+            --bg-app: #0b0f13;
+            --bg-surface: #141a21;
+            --bg-surface-elevated: #1c252f;
+            --bg-input: #0e1318;
+            
+            /* Palette principale demandée */
+            --primary: #006f78;
+            --primary-light: #0096a3;
+            --primary-glow: rgba(0, 111, 120, 0.35);
+            
+            /* Alertes et validations */
+            --alert: #e62311;
+            --alert-bg: rgba(230, 35, 17, 0.14);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.14);
+            --warning: #f59e0b;
+            --tape-yellow: #facc15;
+            --tape-dark: #854d0e;
+
+            /* Textes & Bordures */
+            --text-main: #f3f6f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --border: #26323f;
+            --border-focus: #0096a3;
+
+            /* Dimensions */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --nav-height: 68px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            line-height: 1.45;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: calc(var(--nav-height) + 16px);
+        }
+
+        @media (min-width: 1024px) {
+            body {
+                padding-bottom: 24px;
+            }
+        }
+
+        /* ==========================================================================
+           HEADER & BARRE DE STATUT RAPIDE
+           ========================================================================== */
+        .app-header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            flex-shrink: 0;
+        }
+
+        .brand-title h1 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .brand-title span {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: block;
+            font-weight: 500;
+        }
+
+        /* Sélecteur global d'unité (Mètres / Centimètres) */
+        .unit-switch {
+            display: flex;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 3px;
+        }
+
+        .unit-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 6px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .unit-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ==========================================================================
+           LAYOUT PRINCIPAL (MOBILE FIRST -> DESKTOP SPLIT)
+           ========================================================================== */
+        .main-container {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 1024px) {
+            .main-container {
+                padding: 20px 24px;
+                grid-template-columns: 1.15fr 0.85fr;
+                align-items: start;
+            }
+        }
+
+        /* ==========================================================================
+           CARTE RÉSULTAT EN TEMPS RÉEL (STYLE CALCULATRICE CHANTIER)
+           ========================================================================== */
+        .result-banner {
+            background: linear-gradient(145deg, #102a2e, var(--bg-surface));
+            border: 1.5px solid var(--primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .result-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--primary-light);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .result-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .result-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        @media (min-width: 640px) {
+            .result-number {
+                font-size: 3rem;
+            }
+        }
+
+        .result-unit {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-light);
+        }
+
+        .result-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Badge Conformité Réception */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .status-badge.neutral {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .status-badge.ok {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .status-badge.alert {
+            background: var(--alert-bg);
+            color: #ff6b5e;
+            border: 1px solid var(--alert);
+            animation: pulseAlert 2s infinite;
+        }
+
+        @keyframes pulseAlert {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(230, 35, 17, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(230, 35, 17, 0); }
+        }
+
+        /* Barre de contrôle Bon de Livraison */
+        .target-bar {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .target-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .target-input {
+            width: 82px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 6px 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .target-input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            border: none;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: transform 0.1s, background 0.15s;
+        }
+
+        .btn-action:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-secondary {
+            background: var(--bg-surface-elevated);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+        }
+
+        /* ==========================================================================
+           SÉLECTEUR DE CATÉGORIE & FORMES RÉELLES
+           ========================================================================== */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Onglets Benne vs Sol */
+        .category-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: var(--bg-input);
+            padding: 5px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+        }
+
+        .cat-tab {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 11px 10px;
+            border-radius: 9px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.15s;
+        }
+
+        .cat-tab.active {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Grille des formes spécifiques */
+        .shapes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        @media (min-width: 640px) {
+            .shapes-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .shape-card {
+            background: var(--bg-surface-elevated);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: var(--text-main);
+        }
+
+        .shape-card:hover {
+            border-color: var(--text-dim);
+        }
+
+        .shape-card.active {
+            background: rgba(0, 111, 120, 0.22);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 1px var(--primary-light);
+        }
+
+        .shape-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .shape-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-light);
+        }
+
+        .shape-card.active .shape-icon {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .shape-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
+        .shape-desc {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* ==========================================================================
+           LECTEUR D'ANIMATION TUTORIELLE INTERACTIVE (VIDÉO-SIMULATION)
+           ========================================================================== */
+        .tutorial-player {
+            background: #090d11;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tutorial-header {
+            padding: 10px 14px;
+            background: var(--bg-surface-elevated);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .tutorial-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--tape-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--tape-yellow);
+            animation: blink 1.4s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            background: radial-gradient(circle at 50% 40%, #16222c 0%, #090d11 100%);
+        }
+
+        @media (min-width: 1024px) {
+            .canvas-wrapper {
+                height: 290px;
+            }
+        }
+
+        canvas#tutorialCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Sous-titre dynamique de l'action en cours dans la vidéo */
+        .tutorial-caption-bar {
+            background: rgba(11, 15, 19, 0.92);
+            border-top: 1px solid var(--border);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-pill {
+            background: var(--primary);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .caption-text {
+            font-size: 0.84rem;
+            font-weight: 500;
+            color: #f8fafc;
+        }
+
+        /* Barre de contrôles vidéo (Play/Pause + Sélection d'étape) */
+        .video-controls {
+            background: var(--bg-surface);
+            padding: 8px 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .play-btn {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .step-btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 7px;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .step-btn.active {
+            background: rgba(250, 204, 21, 0.18);
+            border-color: var(--tape-yellow);
+            color: var(--tape-yellow);
+        }
+
+        /* ==========================================================================
+           FORMULAIRE DE MESURES INTELLIGENT (IRRÉGULARITÉS & MOYENNES)
+           ========================================================================== */
+        .inputs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .measure-box {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            transition: border-color 0.15s;
+        }
+
+        .measure-box.focused {
+            border-color: var(--tape-yellow);
+        }
+
+        .measure-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 8px;
+        }
+
+        .measure-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .measure-code {
+            background: var(--tape-yellow);
+            color: #000;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+
+        .multi-toggle {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary-light);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .multi-toggle.active {
+            background: rgba(0, 150, 163, 0.18);
+            border-color: var(--primary-light);
+        }
+
+        .measure-hint {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .num-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+
+        .num-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 11px 42px 11px 12px;
+            transition: border-color 0.15s;
+        }
+
+        .num-input:focus {
+            outline: none;
+            border-color: var(--tape-yellow);
+            background: #0a0e12;
+        }
+
+        .input-unit-tag {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            pointer-events: none;
+        }
+
+        .avg-pill {
+            margin-top: 6px;
+            font-size: 0.76rem;
+            color: var(--success);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* ==========================================================================
+           OPTIONS MATÉRIAU & COEFFICIENT DE VIDE (MOELLON / CAILLASSE)
+           ========================================================================== */
+        .material-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .select-field {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .void-info-box {
+            margin-top: 10px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.78rem;
+            color: #fcd34d;
+            display: none;
+        }
+
+        .void-info-box.visible {
+            display: block;
+        }
+
+        /* ==========================================================================
+           SECTION PÉDAGOGIE & TRANSPARENCE DES FORMULES ("COMPRENDRE LE CALCUL")
+           ========================================================================== */
+        .pedagogy-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .pedagogy-header {
+            padding: 14px 16px;
+            background: var(--bg-surface-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .pedagogy-header h3 {
+            font-size: 0.92rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pedagogy-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .formula-box {
+            background: var(--bg-input);
+            border-left: 4px solid var(--primary-light);
+            padding: 12px 14px;
+            border-radius: 8px;
+        }
+
+        .formula-name {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--primary-light);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .formula-math {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .step-calculation {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px 12px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .child-explanation {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.84rem;
+            color: #d1fae5;
+        }
+
+        .child-explanation strong {
+            color: var(--success);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* ==========================================================================
+           HISTORIQUE DES RÉCEPTIONS DU JOUR
+           ========================================================================== */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-info h4 {
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .history-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .history-vol {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--primary-light);
+            text-align: right;
+        }
+
+        /* ==========================================================================
+           BARRE DE NAVIGATION INFÉRIEURE STYLE ANDROID (MOBILE)
+           ========================================================================== */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-height);
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        @media (min-width: 1024px) {
+            .mobile-nav {
+                display: none;
+            }
+        }
+
+        .nav-item {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary-light);
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary-light);
+        }
+
+        /* Gestion visibilité onglets sur mobile uniquement */
+        @media (max-width: 1023px) {
+            .mobile-hidden {
+                display: none !important;
+            }
+        }
+
+        /* Notification Toast sans alert() */
+        .toast {
+            position: fixed;
+            bottom: 84px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e293b;
+            color: #ffffff;
+            border: 1px solid var(--primary-light);
+            padding: 10px 18px;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================================================================
+         EN-TÊTE APPLICATION
+         ====================================================================== -->
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <div class="brand-title">
+                <h1>CubagePro Terrain</h1>
+                <span>Réception &amp; Volume Réel (m³)</span>
+            </div>
+        </div>
+
+        <!-- Bascule rapide Mètres / Centimètres -->
+        <div class="unit-switch" role="group" aria-label="Unité de mesure du mètre tirant">
+            <button type="button" class="unit-btn active" id="btnUnitM" onclick="setUnit('m')">Mètres (m)</button>
+            <button type="button" class="unit-btn" id="btnUnitCm" onclick="setUnit('cm')">Cm (cm)</button>
+        </div>
+    </header>
+
+    <!-- ======================================================================
+         CONTENEUR PRINCIPAL (SPLIT DESKTOP / ONGLETS MOBILE)
+         ====================================================================== -->
+    <main class="main-container">
+
+        <!-- COLONNE GAUCHE : CALCULATRICE, CHOIX DE FORME & SAISIE -->
+        <div class="left-column" style="display: flex; flex-direction: column; gap: 14px;">
+            
+            <!-- BANDEAU RÉSULTAT INSTANTANÉ -->
+            <section class="result-banner" aria-live="polite">
+                <div class="result-top">
+                    <div>
+                        <div class="result-label" id="resultTitleLabel">Volume Apparent Mesuré</div>
+                        <div class="result-value-row">
+                            <span class="result-number" id="volumeOutput">0.00</span>
+                            <span class="result-unit">m³</span>
+                        </div>
+                        <div class="result-sub" id="volumeSecondaryInfo">Saisissez les mesures prises au mètre tirant</div>
+                    </div>
+                    <div id="complianceBadge" class="status-badge neutral">
+                        En attente
+                    </div>
+                </div>
+
+                <!-- Contrôle Bon de Livraison & Actions rapides -->
+                <div class="target-bar">
+                    <div class="target-input-group">
+                        <label for="expectedVolume">Bon livraison :</label>
+                        <input type="number" id="expectedVolume" class="target-input" placeholder="Ex: 10" step="0.5" min="0" oninput="recalculate()">
+                        <span>m³</span>
+                    </div>
+
+                    <div class="quick-actions">
+                        <button type="button" class="btn-action btn-secondary" onclick="copyReport()" title="Copier le rapport texte pour WhatsApp">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copier
+                        </button>
+                        <button type="button" class="btn-action btn-primary" onclick="saveToHistory()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Valider
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PANNEAU DE SÉLECTION & MESURES (Onglet 1 sur mobile) -->
+            <div id="tab-measure" class="tab-section" style="display: flex; flex-direction: column; gap: 14px;">
+                
+                <!-- Étape 1 : Où est le matériau ? -->
+                <section class="card">
+                    <div class="section-title">
+                        <span>1. Situation sur le terrain</span>
+                        <span style="font-size: 0.72rem; color: var(--primary-light);">Choisissez la forme réelle</span>
+                    </div>
+
+                    <div class="category-tabs">
+                        <button type="button" class="cat-tab active" id="catTruck" onclick="selectCategory('truck')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                            Sur Benne Camion
+                        </button>
+                        <button type="button" class="cat-tab" id="catGround" onclick="selectCategory('ground')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 20h18L14 7l-4 6-3-3-4 10z"></path></svg>
+                            Déversé au Sol
+                        </button>
+                    </div>
+
+                    <!-- Grille dynamique des formes -->
+                    <div class="shapes-grid" id="shapesGrid"></div>
+                </section>
+
+                <!-- Étape 2 : Mesures au Mètre Tirant -->
+                <section class="card">
+                    <div class="section-title">
+                        <span>2. Mesures au mètre tirant</span>
+                        <button type="button" onclick="resetInputs()" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; font-weight:700; cursor:pointer; text-decoration:underline;">Effacer chiffres</button>
+                    </div>
+
+                    <!-- Champs dynamiques selon la forme -->
+                    <div class="inputs-list" id="dynamicInputs"></div>
+
+                    <!-- Sélection du Matériau & Gestion des Vides (Moellon vs Sable/Gravier) -->
+                    <div class="material-bar">
+                        <div>
+                            <label for="materialType" style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:700; margin-bottom:4px;">Matériau livré</label>
+                            <select id="materialType" class="select-field" onchange="onMaterialChange()">
+                                <option value="sable">Sable (fin / rivière)</option>
+                                <option value="gravier">Gravier / Caillasse concassée</option>
+                                <option value="laterite">Latérite / Terre de remblai</option>
+                                <option value="moellon">Moellons / Gros blocs rocheux</option>
+                            </select>
+                        </div>
+                        <div id="voidControlWrap" style="opacity: 0.5; pointer-events: none;">
+                            <label for="voidPercent" style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:700; margin-bottom:4px;">Indice de vide (Moellon)</label>
+                            <select id="voidPercent" class="select-field" onchange="recalculate()">
+                                <option value="0">0% (Volume apparent tas)</option>
+                                <option value="35" selected>35% (Moellon bien rangé)</option>
+                                <option value="40">40% (Moellon en vrac / benne)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="voidExplanation" class="void-info-box">
+                        <strong>Réalité du moellon :</strong> Contrairement au sable, les gros blocs laissent de l'air entre eux. En génie civil, un tas en vrac contient ~35% à 40% de vide. Le volume plein réel de pierre est affiché ci-dessous.
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : TUTORIEL VIDÉO ANIMÉ, PÉDAGOGIE & HISTORIQUE -->
+        <div class="right-column" style="display: flex; flex-direction: column; gap: 14px;">
+            
+            <!-- LECTEUR TUTORIEL ANIMÉ EN BOUCLE (Onglet 2 sur mobile, toujours visible sur PC) -->
+            <section id="tab-tutorial" class="tutorial-player tab-section">
+                <div class="tutorial-header">
+                    <div class="tutorial-badge">
+                        <span class="live-dot"></span>
+                        <span>Démonstration Mètre Tirant</span>
+                    </div>
+                    <span id="tutorialShapeBadge" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Benne pleine</span>
+                </div>
+
+                <div class="canvas-wrapper">
+                    <canvas id="tutorialCanvas"></canvas>
+                </div>
+
+                <!-- Sous-titre pédagogique de l'étape animée -->
+                <div class="tutorial-caption-bar">
+                    <span class="step-pill" id="animStepPill">ÉTAPE 1/3</span>
+                    <p class="caption-text" id="animCaptionText">Tirez le mètre jaune d'un bout à l'autre de l'intérieur de la benne.</p>
+                </div>
+
+                <!-- Contrôles vidéo interactifs -->
+                <div class="video-controls">
+                    <button type="button" class="play-btn" id="btnPlayPause" onclick="toggleAnimation()">
+                        <span id="playIcon">❚❚</span> <span id="playLabel">Pause</span>
+                    </button>
+                    <div class="step-buttons" id="animStepButtons"></div>
+                </div>
+            </section>
+
+            <!-- TIROIR PÉDAGOGIQUE : COMPRENDRE LE CALCUL (Onglet 3 sur mobile, toujours visible sur PC) -->
+            <div id="tab-logic" class="tab-section" style="display: flex; flex-direction: column; gap: 14px;">
+                <section class="pedagogy-card">
+                    <div class="pedagogy-header">
+                        <h3>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            Comprendre comment le m³ est trouvé
+                        </h3>
+                        <span style="font-size: 0.72rem; color: var(--success); font-weight: 700;">100% Géométrie Réelle</span>
+                    </div>
+
+                    <div class="pedagogy-body">
+                        <div class="formula-box">
+                            <div class="formula-name" id="formulaTitle">Formule officielle : Parallélépipède rectangle</div>
+                            <div class="formula-math" id="formulaMath">V = Longueur × Largeur × Hauteur</div>
+                        </div>
+
+                        <div>
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Calcul détaillé avec vos chiffres :</div>
+                            <div class="step-calculation" id="formulaSteps">
+                                En attente de saisie de vos mesures...
+                            </div>
+                        </div>
+
+                        <div class="child-explanation">
+                            <strong>Explication simple (Logique visuelle) :</strong>
+                            <span id="childLogicText">Imaginez que la benne est une grande boîte à chaussures. On mesure combien de cubes de 1 mètre sur 1 mètre tiennent au fond, puis on multiplie par la hauteur du tas.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- HISTORIQUE DES CONTRÔLES DU JOUR -->
+                <section class="card">
+                    <div class="section-title">
+                        <span>Réceptions enregistrées (<span id="historyCount">0</span>)</span>
+                        <button type="button" onclick="clearHistory()" style="background:none; border:none; color:#ff6b5e; font-size:0.74rem; font-weight:700; cursor:pointer;">Vider</button>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <p style="font-size: 0.8rem; color: var(--text-dim); text-align: center; padding: 14px 0;">
+                            Aucune livraison validée aujourd'hui. Cliquez sur « Valider » après chaque mesure.
+                        </p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- ======================================================================
+         NAVIGATION INFÉRIEURE MOBILE (STYLE ANDROID NATIF)
+         ====================================================================== -->
+    <nav class="mobile-nav" aria-label="Navigation principale mobile">
+        <button type="button" class="nav-item active" id="nav-measure" onclick="switchMobileTab('measure')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="12" y2="14"></line></svg>
+            <span>Mesurer</span>
+        </button>
+        <button type="button" class="nav-item" id="nav-tutorial" onclick="switchMobileTab('tutorial')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Vidéo Guide</span>
+        </button>
+        <button type="button" class="nav-item" id="nav-logic" onclick="switchMobileTab('logic')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            <span>Formule &amp; Bilan</span>
+        </button>
+    </nav>
+
+    <!-- Toast de confirmation non intrusif -->
+    <div id="toast" class="toast" role="status"></div>
+
+    <!-- ======================================================================
+         MOTEUR JAVASCRIPT : GÉOMÉTRIE RÉELLE, ANIMATIONS CANVAS & ÉTAT
+         ====================================================================== -->
+    <script>
+        /* ----------------------------------------------------------------------
+           1. BASE DE CONNAISSANCES GÉOMÉTRIQUES RÉELLES (CHANTIER & GÉNIE CIVIL)
+           ---------------------------------------------------------------------- */
+        const SHAPES_DB = {
+            // ==================== CATÉGORIE 1 : SUR BENNE ====================
+            truck_flat: {
+                id: 'truck_flat',
+                category: 'truck',
+                name: 'Benne pleine à ras',
+                shortDesc: 'Chargement plat et nivelé',
+                iconSvg: '<rect x="3" y="8" width="18" height="10" rx="1"/>',
+                fields: [
+                    { id: 'L', code: 'L', label: 'Longueur intérieure benne', hint: 'Tirez le mètre de la paroi avant jusqu’à la porte arrière.', allowMulti: false, defaultVal: 4.50 },
+                    { id: 'W', code: 'l', label: 'Largeur intérieure benne', hint: 'Mesurez d’un bord latéral à l’autre à l’intérieur.', allowMulti: false, defaultVal: 2.20 },
+                    { id: 'H', code: 'H', label: 'Hauteur du matériau', hint: 'Plantez une tige jusqu’au fond ou mesurez la ridelle si pleine.', allowMulti: true, multiLabels: ['Avant', 'Milieu', 'Arrière'], defaultVal: 1.10 }
+                ],
+                formulaTitle: 'Parallélépipède rectangle (Volume prismatique)',
+                formulaMath: 'V = L × l × H_moyenne',
+                childLogic: 'C’est comme une grande boîte rectangulaire. Si le dessus n’est pas tout à fait plat, prendre 3 hauteurs (avant, milieu, arrière) permet de compenser les creux et les bosses.',
+                stepsTutorial: [
+                    { title: '1. Longueur (L)', text: 'Tirez le mètre jaune le long du bord intérieur de la benne, de l’avant vers l’arrière.' },
+                    { title: '2. Largeur (l)', text: 'Mesurez la largeur intérieure entre les deux ridelles (côtés) de la benne.' },
+                    { title: '3. Hauteur (H)', text: 'Mesurez la hauteur verticale du fond jusqu’au niveau du sable (en 3 points si irrégulier).' }
+                ],
+                compute: (vals) => {
+                    const L = vals.L;
+                    const W = vals.W;
+                    const H = vals.H;
+                    const V = L * W * H;
+                    const steps = `1. Longueur (L) = ${L.toFixed(2)} m\n` +
+                                  `2. Largeur (l) = ${W.toFixed(2)} m\n` +
+                                  `3. Hauteur retenue (H) = ${H.toFixed(2)} m\n` +
+                                  `4. Volume = ${L.toFixed(2)} × ${W.toFixed(2)} × ${H.toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            truck_dome: {
+                id: 'truck_dome',
+                category: 'truck',
+                name: 'Benne avec dôme (bosse)',
+                shortDesc: 'Chargement bombé au centre',
+                iconSvg: '<path d="M3 10 Q12 3 21 10 L21 18 L3 18 Z"/>',
+                fields: [
+                    { id: 'L', code: 'L', label: 'Longueur intérieure benne', hint: 'Mesurez la longueur utile de la caisse.', allowMulti: false, defaultVal: 4.80 },
+                    { id: 'W', code: 'l', label: 'Largeur intérieure benne', hint: 'Mesurez la largeur entre les deux côtés.', allowMulti: false, defaultVal: 2.30 },
+                    { id: 'Hb', code: 'Hb', label: 'Hauteur sur les bords (ridelles)', hint: 'Hauteur du matériau contre les parois latérales.', allowMulti: true, multiLabels: ['Côté Gauche', 'Côté Droit'], defaultVal: 1.00 },
+                    { id: 'Hc', code: 'Hc', label: 'Hauteur maximale au sommet', hint: 'Posez une règle/ficelle entre les ridelles et mesurez jusqu’au sommet de la bosse.', allowMulti: false, defaultVal: 1.45 }
+                ],
+                formulaTitle: 'Prisme rectangulaire + Calotte parabolique (Simpson)',
+                formulaMath: 'V = L × l × [ Hb + (2/3) × (Hc - Hb) ]',
+                childLogic: 'Le camion est rempli comme une boîte jusqu’au bord (Hb), plus une grosse bosse arrondie au-dessus. En géométrie, une bosse arrondie vaut les deux tiers (2/3) d’une boîte de même hauteur.',
+                stepsTutorial: [
+                    { title: '1. Base L × l', text: 'Mesurez la longueur (L) et la largeur (l) intérieures de la benne.' },
+                    { title: '2. Hauteur bords (Hb)', text: 'Mesurez la hauteur du matériau contre les parois gauche et droite de la benne.' },
+                    { title: '3. Sommet bosse (Hc)', text: 'Tendez le mètre au-dessus de la bosse pour mesurer la hauteur totale au centre.' }
+                ],
+                compute: (vals) => {
+                    const L = vals.L, W = vals.W, Hb = vals.Hb, Hc = Math.max(vals.Hc, Hb);
+                    const domeHeight = Hc - Hb;
+                    const hEquiv = Hb + (2 / 3) * domeHeight;
+                    const V = L * W * hEquiv;
+                    const steps = `1. Hauteur de base aux bords (Hb) = ${Hb.toFixed(2)} m\n` +
+                                  `2. Hauteur de la bosse seule = ${Hc.toFixed(2)} - ${Hb.toFixed(2)} = ${domeHeight.toFixed(2)} m\n` +
+                                  `3. Hauteur moyenne réelle = ${Hb.toFixed(2)} + (0.667 × ${domeHeight.toFixed(2)}) = ${hEquiv.toFixed(2)} m\n` +
+                                  `4. Volume = ${L.toFixed(2)} × ${W.toFixed(2)} × ${hEquiv.toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            truck_irregular: {
+                id: 'truck_irregular',
+                category: 'truck',
+                name: 'Benne irrégulière / pente',
+                shortDesc: 'Demi-charge ou pente avant/arrière',
+                iconSvg: '<polygon points="3,7 21,13 21,18 3,18"/>',
+                fields: [
+                    { id: 'L', code: 'L', label: 'Longueur occupée par le tas', hint: 'Mesurez uniquement la longueur où il y a du matériau.', allowMulti: false, defaultVal: 4.50 },
+                    { id: 'W_bot', code: 'l1', label: 'Largeur au fond de la benne', hint: 'Largeur en bas (utile si les parois sont inclinées).', allowMulti: false, defaultVal: 2.10 },
+                    { id: 'W_top', code: 'l2', label: 'Largeur en haut du tas', hint: 'Largeur à la surface du matériau (mettre idem si parois droites).', allowMulti: false, defaultVal: 2.25 },
+                    { id: 'H_av', code: 'H1', label: 'Hauteur côté cabine (Avant)', hint: 'Mesurez la hauteur contre la paroi avant.', allowMulti: false, defaultVal: 1.30 },
+                    { id: 'H_mil', code: 'H2', label: 'Hauteur au milieu', hint: 'Plantez une tige graduée au centre du chargement.', allowMulti: false, defaultVal: 0.95 },
+                    { id: 'H_ar', code: 'H3', label: 'Hauteur côté porte (Arrière)', hint: 'Mesurez la hauteur à l’arrière.', allowMulti: false, defaultVal: 0.50 }
+                ],
+                formulaTitle: 'Intégration trapézoïdale (Section trapèze × Profil longitudinal)',
+                formulaMath: 'V = L × ((l1 + l2)/2) × ((H1 + 2×H2 + H3)/4)',
+                childLogic: 'Quand le tas descend en pente de l’avant vers l’arrière, la hauteur du milieu compte double car elle relie les deux moitiés du camion. On utilise la vraie moyenne de profil.',
+                stepsTutorial: [
+                    { title: '1. Longueur & Largeurs', text: 'Mesurez la longueur occupée (L), puis la largeur en bas (l1) et en haut (l2).' },
+                    { title: '2. Hauteur Avant (H1)', text: 'Mesurez la hauteur du matériau contre la paroi avant (côté cabine).' },
+                    { title: '3. Milieu (H2) & Arrière (H3)', text: 'Mesurez la hauteur au centre (H2) puis à l’arrière (H3) pour capter la pente.' }
+                ],
+                compute: (vals) => {
+                    const wAvg = (vals.W_bot + vals.W_top) / 2;
+                    const hWeighted = (vals.H_av + 2 * vals.H_mil + vals.H_ar) / 4;
+                    const V = vals.L * wAvg * hWeighted;
+                    const steps = `1. Largeur moyenne = (${vals.W_bot.toFixed(2)} + ${vals.W_top.toFixed(2)}) / 2 = ${wAvg.toFixed(2)} m\n` +
+                                  `2. Hauteur pondérée = (${vals.H_av.toFixed(2)} + 2×${vals.H_mil.toFixed(2)} + ${vals.H_ar.toFixed(2)}) / 4 = ${hWeighted.toFixed(2)} m\n` +
+                                  `3. Volume = ${vals.L.toFixed(2)} × ${wAvg.toFixed(2)} × ${hWeighted.toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            // ==================== CATÉGORIE 2 : DÉVERSÉ AU SOL ====================
+            ground_cone: {
+                id: 'ground_cone',
+                category: 'ground',
+                name: 'Tas conique (Tour au sol)',
+                shortDesc: 'Déversé en un tas pointu (méthode précise)',
+                iconSvg: '<polygon points="12,4 21,19 3,19"/>',
+                fields: [
+                    { id: 'P', code: 'P', label: 'Périmètre au sol (Tour complet)', hint: 'Faites le tour complet du tas au ras du sol avec le mètre tirant.', allowMulti: false, defaultVal: 11.50 },
+                    { id: 'H', code: 'H', label: 'Hauteur du tas (Terrain plat ou pente)', hint: 'Mesurez la hauteur verticale du sol jusqu’à la pointe (2 côtés si sol en pente).', allowMulti: true, multiLabels: ['Côté 1', 'Côté 2 (si pente)'], defaultVal: 1.35 }
+                ],
+                formulaTitle: 'Cône de révolution à partir du périmètre au sol',
+                formulaMath: 'Rayon R = P / (2 × π)  →  V = (1/3) × π × R² × H',
+                childLogic: 'Un tas au sol n’est jamais un cercle parfait ! En faisant le tour complet au sol avec le mètre (périmètre), on trouve la vraie surface de base sans avoir à creuser pour chercher le centre. On divise par 3 car 3 tas pointus remplissent exactement 1 boîte de même base et même hauteur.',
+                stepsTutorial: [
+                    { title: '1. Tour complet (P)', text: 'Posez le mètre tirant au sol et faites tout le tour de la base du tas.' },
+                    { title: '2. Repérer le sommet', text: 'Placez une règle ou un bâton horizontalement au sommet du tas.' },
+                    { title: '3. Hauteur (H)', text: 'Mesurez verticalement du sol jusqu’au sommet (des deux côtés si le sol est en pente).' }
+                ],
+                compute: (vals) => {
+                    const P = vals.P;
+                    const H = vals.H;
+                    const R = P / (2 * Math.PI);
+                    const area = Math.PI * R * R;
+                    const V = (1 / 3) * area * H;
+                    const steps = `1. Rayon moyen déduit du tour = ${P.toFixed(2)} / (2 × 3.1416) = ${R.toFixed(2)} m\n` +
+                                  `2. Surface au sol = 3.1416 × ${R.toFixed(2)}² = ${area.toFixed(2)} m²\n` +
+                                  `3. Volume cône = (1/3) × ${area.toFixed(2)} × ${H.toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            ground_trapezoid: {
+                id: 'ground_trapezoid',
+                category: 'ground',
+                name: 'Tas allongé (Cordon)',
+                shortDesc: 'Camion qui avance en bennant',
+                iconSvg: '<polygon points="6,7 18,7 22,19 2,19"/>',
+                fields: [
+                    { id: 'L', code: 'L', label: 'Longueur totale du tas', hint: 'Tirez le mètre d’une extrémité à l’autre du cordon.', allowMulti: false, defaultVal: 6.20 },
+                    { id: 'B', code: 'B', label: 'Largeur au sol (Base)', hint: 'Largeur en bas du tas (prenez 2 ou 3 mesures sur la longueur).', allowMulti: true, multiLabels: ['Début', 'Milieu', 'Fin'], defaultVal: 2.60 },
+                    { id: 'b', code: 'b', label: 'Largeur au sommet (Crête)', hint: 'Largeur du plateau en haut du tas (mettre 0 si arête pointue).', allowMulti: true, multiLabels: ['Début', 'Milieu', 'Fin'], defaultVal: 0.80 },
+                    { id: 'H', code: 'H', label: 'Hauteur du tas', hint: 'Hauteur verticale du sol jusqu’au sommet (moyenne sur la longueur).', allowMulti: true, multiLabels: ['Début', 'Milieu', 'Fin'], defaultVal: 1.15 }
+                ],
+                formulaTitle: 'Prisme trapézoïdal (Cubature de terrassement)',
+                formulaMath: 'V = L × ((B_moy + b_moy) / 2) × H_moy',
+                childLogic: 'Vu de face, ce tas ressemble à un trapèze (large en bas, plus étroit en haut). On fait la moyenne entre la largeur du bas et celle du haut pour le transformer en rectangle équivalent, puis on multiplie par la longueur et la hauteur.',
+                stepsTutorial: [
+                    { title: '1. Longueur (L)', text: 'Tirez le mètre tout le long du tas, d’un bout à l’autre.' },
+                    { title: '2. Largeurs Bas (B) & Haut (b)', text: 'Mesurez la largeur au sol (B) puis la largeur du plat au sommet (b).' },
+                    { title: '3. Hauteur (H)', text: 'Mesurez la hauteur du sol jusqu’au plateau supérieur en 2 ou 3 endroits.' }
+                ],
+                compute: (vals) => {
+                    const wAvg = (vals.B + vals.b) / 2;
+                    const V = vals.L * wAvg * vals.H;
+                    const steps = `1. Largeur moyenne trapèze = (${vals.B.toFixed(2)} + ${vals.b.toFixed(2)}) / 2 = ${wAvg.toFixed(2)} m\n` +
+                                  `2. Section moyenne = ${wAvg.toFixed(2)} × ${vals.H.toFixed(2)} = ${(wAvg * vals.H).toFixed(2)} m²\n` +
+                                  `3. Volume = ${vals.L.toFixed(2)} × ${(wAvg * vals.H).toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            ground_dome: {
+                id: 'ground_dome',
+                category: 'ground',
+                name: 'Tas étalé / Dôme ovale',
+                shortDesc: 'Tas arrondi plus long que large',
+                iconSvg: '<path d="M2 18 Q12 5 22 18 Z"/>',
+                fields: [
+                    { id: 'L', code: 'L', label: 'Plus grande longueur au sol', hint: 'Mesurez le tas dans son axe le plus long.', allowMulti: false, defaultVal: 4.40 },
+                    { id: 'W', code: 'l', label: 'Plus grande largeur au sol', hint: 'Mesurez en croix (perpendiculairement à la longueur).', allowMulti: false, defaultVal: 3.10 },
+                    { id: 'H', code: 'H', label: 'Hauteur maximale au centre', hint: 'Hauteur verticale au point le plus haut du dôme.', allowMulti: true, multiLabels: ['Côté 1', 'Côté 2'], defaultVal: 1.10 }
+                ],
+                formulaTitle: 'Demi-ellipsoïde (Calotte ellipsoïdale)',
+                formulaMath: 'V = (π / 6) × L × l × H  (soit 0.5236 × L × l × H)',
+                childLogic: 'Ce tas est rond comme un ballon coupé en deux, mais étiré en ovale. Si on l’enfermait dans une boîte rectangulaire de même longueur, largeur et hauteur, le tas arrondi occuperait un peu plus de la moitié de la boîte (52,36%).',
+                stepsTutorial: [
+                    { title: '1. Grande longueur (L)', text: 'Tirez le mètre au sol dans le sens le plus long du tas.' },
+                    { title: '2. Largeur en croix (l)', text: 'Mesurez la largeur au sol perpendiculairement à la première mesure.' },
+                    { title: '3. Hauteur sommet (H)', text: 'Mesurez la hauteur maximale au centre du dôme.' }
+                ],
+                compute: (vals) => {
+                    const V = (Math.PI / 6) * vals.L * vals.W * vals.H;
+                    const steps = `1. Coefficient géométrique demi-ellipsoïde = π / 6 ≈ 0.5236\n` +
+                                  `2. Boîte englobante = ${vals.L.toFixed(2)} × ${vals.W.toFixed(2)} × ${vals.H.toFixed(2)} = ${(vals.L * vals.W * vals.H).toFixed(2)} m³\n` +
+                                  `3. Volume réel = 0.5236 × ${(vals.L * vals.W * vals.H).toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            },
+
+            ground_wall: {
+                id: 'ground_wall',
+                category: 'ground',
+                name: 'Tas contre un mur / angle',
+                shortDesc: 'Adossé à un mur ou coin de chantier',
+                iconSvg: '<path d="M4 4 L4 19 L20 19 Q16 9 4 8 Z"/>',
+                fields: [
+                    { id: 'config', code: 'Type', label: 'Position contre le mur', isSelect: true, options: [
+                        { label: 'Contre 1 mur droit (Demi-cône)', value: 0.5 },
+                        { label: 'Dans un angle de 2 murs (Quart de cône)', value: 0.25 }
+                    ], defaultVal: 0.5 },
+                    { id: 'R', code: 'R', label: 'Avancée au sol depuis le mur', hint: 'Distance entre le pied du mur et le bord extérieur du tas.', allowMulti: true, multiLabels: ['Mesure 1', 'Mesure 2'], defaultVal: 2.10 },
+                    { id: 'H', code: 'H', label: 'Hauteur contre le mur', hint: 'Lisez directement la hauteur du sable contre le mur !', allowMulti: false, defaultVal: 1.40 }
+                ],
+                formulaTitle: 'Fraction de cône de révolution (1/2 ou 1/4)',
+                formulaMath: 'V = Fraction × (1/3) × π × R² × H',
+                childLogic: 'Le mur coupe le tas net ! C’est très pratique car on peut lire la hauteur directement sur le mur. Contre un mur droit, on a exactement la moitié d’un tas conique (1/2). Dans un coin entre deux murs, on a un quart de tas (1/4).',
+                stepsTutorial: [
+                    { title: '1. Avancée au sol (R)', text: 'Posez le bout du mètre contre le bas du mur et tirez jusqu’au bord du tas.' },
+                    { title: '2. Hauteur sur le mur (H)', text: 'Mesurez verticalement le long du mur jusqu’au sommet du matériau.' },
+                    { title: '3. Vérifier l’angle', text: 'Indiquez si le tas touche 1 mur droit (moitié) ou un coin de 2 murs (quart).' }
+                ],
+                compute: (vals) => {
+                    const frac = vals.config || 0.5;
+                    const fullCone = (1 / 3) * Math.PI * vals.R * vals.R * vals.H;
+                    const V = frac * fullCone;
+                    const fracLabel = frac === 0.5 ? '1/2 (Demi-cône)' : '1/4 (Quart de cône)';
+                    const steps = `1. Volume du cône entier théorique = (1/3) × 3.1416 × ${vals.R.toFixed(2)}² × ${vals.H.toFixed(2)} = ${fullCone.toFixed(2)} m³\n` +
+                                  `2. Fraction réelle contre mur = ${fracLabel}\n` +
+                                  `3. Volume réel = ${frac} × ${fullCone.toFixed(2)} = ${V.toFixed(3)} m³`;
+                    return { volume: V, steps };
+                }
+            }
+        };
+
+        /* ----------------------------------------------------------------------
+           2. ÉTAT DE L'APPLICATION
+           ---------------------------------------------------------------------- */
+        let state = {
+            unit: 'm',               // 'm' ou 'cm'
+            category: 'truck',       // 'truck' ou 'ground'
+            shapeId: 'truck_flat',   // ID de la forme active
+            inputs: {},              // { fieldId: [val1, val2, ...] }
+            multiEnabled: {},        // { fieldId: boolean }
+            material: 'sable',
+            voidPercent: 0,
+            history: []
+        };
+
+        // État de l'animation tutorielle
+        let animState = {
+            isPlaying: true,
+            stepIndex: 0,
+            progress: 0,             // 0.0 à 1.0 par étape
+            lastTimestamp: 0,
+            focusedField: null
+        };
+
+        /* ----------------------------------------------------------------------
+           3. INITIALISATION & RENDU INTERFACE
+           ---------------------------------------------------------------------- */
+        window.addEventListener('DOMContentLoaded', () => {
+            loadHistoryFromStorage();
+            renderShapesGrid();
+            selectShape('truck_flat');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            requestAnimationFrame(animationLoop);
+        });
+
+        function setUnit(newUnit) {
+            if (state.unit === newUnit) return;
+            const factor = newUnit === 'cm' ? 100 : 0.01;
+            
+            // Convertir les valeurs actuelles proprement
+            const shape = SHAPES_DB[state.shapeId];
+            shape.fields.forEach(f => {
+                if (!f.isSelect && state.inputs[f.id]) {
+                    state.inputs[f.id] = state.inputs[f.id].map(v => {
+                        if (v === '' || isNaN(v)) return '';
+                        const converted = parseFloat(v) * factor;
+                        return newUnit === 'cm' ? Math.round(converted) : Number(converted.toFixed(2));
+                    });
+                }
+            });
+
+            state.unit = newUnit;
+            document.getElementById('btnUnitM').classList.toggle('active', newUnit === 'm');
+            document.getElementById('btnUnitCm').classList.toggle('active', newUnit === 'cm');
+            renderDynamicInputs();
+            recalculate();
+            showToast(newUnit === 'cm' ? 'Unité : Centimètres (ex: 150 cm)' : 'Unité : Mètres (ex: 1.50 m)');
+        }
+
+        function selectCategory(cat) {
+            state.category = cat;
+            document.getElementById('catTruck').classList.toggle('active', cat === 'truck');
+            document.getElementById('catGround').classList.toggle('active', cat === 'ground');
+            renderShapesGrid();
+            
+            // Sélectionner la première forme de cette catégorie
+            const firstShape = Object.values(SHAPES_DB).find(s => s.category === cat);
+            if (firstShape) selectShape(firstShape.id);
+        }
+
+        function renderShapesGrid() {
+            const grid = document.getElementById('shapesGrid');
+            const shapes = Object.values(SHAPES_DB).filter(s => s.category === state.category);
+            
+            grid.innerHTML = shapes.map(s => `
+                <button type="button" class="shape-card ${s.id === state.shapeId ? 'active' : ''}" onclick="selectShape('${s.id}')">
+                    <div class="shape-card-header">
+                        <div class="shape-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                ${s.iconSvg}
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="shape-name">${s.name}</div>
+                    <div class="shape-desc">${s.shortDesc}</div>
+                </button>
+            `).join('');
+        }
+
+        function selectShape(shapeId) {
+            state.shapeId = shapeId;
+            const shape = SHAPES_DB[shapeId];
+            
+            // Mettre à jour la sélection visuelle
+            renderShapesGrid();
+
+            // Initialiser les valeurs par défaut réalistes si non définies
+            state.inputs = {};
+            state.multiEnabled = {};
+            shape.fields.forEach(f => {
+                if (f.isSelect) {
+                    state.inputs[f.id] = [f.defaultVal];
+                } else {
+                    const val = state.unit === 'cm' ? Math.round(f.defaultVal * 100) : f.defaultVal;
+                    state.inputs[f.id] = [val];
+                    state.multiEnabled[f.id] = false;
+                }
+            });
+
+            // Mettre à jour l'animation tutorielle
+            animState.stepIndex = 0;
+            animState.progress = 0;
+            document.getElementById('tutorialShapeBadge').textContent = shape.name;
+            renderTutorialStepButtons();
+            updateTutorialCaption();
+
+            // Mettre à jour la pédagogie
+            document.getElementById('formulaTitle').textContent = 'Formule officielle : ' + shape.formulaTitle;
+            document.getElementById('formulaMath').textContent = shape.formulaMath;
+            document.getElementById('childLogicText').textContent = shape.childLogic;
+
+            renderDynamicInputs();
+            recalculate();
+        }
+
+        function renderDynamicInputs() {
+            const shape = SHAPES_DB[state.shapeId];
+            const container = document.getElementById('dynamicInputs');
+            const unitLabel = state.unit;
+
+            container.innerHTML = shape.fields.map((f, idx) => {
+                if (f.isSelect) {
+                    return `
+                        <div class="measure-box">
+                            <div class="measure-header">
+                                <span class="measure-title"><span class="measure-code">${f.code}</span> ${f.label}</span>
+                            </div>
+                            <p class="measure-hint">${f.hint}</p>
+                            <select class="select-field" onchange="updateSelectField('${f.id}', this.value)">
+                                ${f.options.map(opt => `<option value="${opt.value}" ${state.inputs[f.id][0] == opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+
+                const isMulti = state.multiEnabled[f.id];
+                const values = state.inputs[f.id];
+                const count = isMulti ? (f.multiLabels ? f.multiLabels.length : 3) : 1;
+
+                let inputsHtml = '';
+                for (let i = 0; i < count; i++) {
+                    const val = values[i] !== undefined ? values[i] : '';
+                    const subLabel = isMulti && f.multiLabels && f.multiLabels[i] ? f.multiLabels[i] : '';
+                    inputsHtml += `
+                        <div class="num-input-wrap">
+                            ${subLabel ? `<div style="font-size:0.68rem; color:var(--text-muted); margin-bottom:3px; font-weight:600;">${subLabel}</div>` : ''}
+                            <input type="number" inputmode="decimal" step="any" min="0"
+                                class="num-input"
+                                value="${val}"
+                                placeholder="0"
+                                onfocus="focusAnimStep(${idx}, '${f.id}')"
+                                oninput="updateNumberField('${f.id}', ${i}, this.value)">
+                            <span class="input-unit-tag">${unitLabel}</span>
+                        </div>
+                    `;
+                }
+
+                // Calculer la moyenne affichée si mode multi activé
+                let avgHtml = '';
+                if (isMulti) {
+                    const validNums = values.slice(0, count).map(v => parseFloat(v)).filter(n => !isNaN(n) && n > 0);
+                    if (validNums.length > 0) {
+                        const avg = validNums.reduce((a, b) => a + b, 0) / validNums.length;
+                        avgHtml = `<div class="avg-pill">Moyenne retenue (${validNums.length} pts) : ${avg.toFixed(2)} ${unitLabel}</div>`;
+                    }
+                }
+
+                return `
+                    <div class="measure-box ${animState.focusedField === f.id ? 'focused' : ''}" id="box_${f.id}">
+                        <div class="measure-header">
+                            <span class="measure-title"><span class="measure-code">${f.code}</span> ${f.label}</span>
+                            ${f.allowMulti ? `
+                                <button type="button" class="multi-toggle ${isMulti ? 'active' : ''}" onclick="toggleMultiMeasure('${f.id}')">
+                                    ${isMulti ? '✓ Moyenne 3 pts' : '+ Irrégulier (moyenne)'}
+                                </button>
+                            ` : ''}
+                        </div>
+                        <p class="measure-hint">${f.hint}</p>
+                        <div class="input-row">${inputsHtml}</div>
+                        ${avgHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleMultiMeasure(fieldId) {
+            state.multiEnabled[fieldId] = !state.multiEnabled[fieldId];
+            if (state.multiEnabled[fieldId]) {
+                const baseVal = state.inputs[fieldId][0] || '';
+                state.inputs[fieldId] = [baseVal, '', ''];
+            } else {
+                state.inputs[fieldId] = [state.inputs[fieldId][0] || ''];
+            }
+            renderDynamicInputs();
+            recalculate();
+        }
+
+        function updateNumberField(fieldId, index, rawVal) {
+            state.inputs[fieldId][index] = rawVal;
+            
+            // Mettre à jour l'indicateur de moyenne sans perdre le focus
+            const shape = SHAPES_DB[state.shapeId];
+            const field = shape.fields.find(f => f.id === fieldId);
+            if (field && state.multiEnabled[fieldId]) {
+                const count = field.multiLabels ? field.multiLabels.length : 3;
+                const validNums = state.inputs[fieldId].slice(0, count).map(v => parseFloat(v)).filter(n => !isNaN(n) && n > 0);
+                const box = document.getElementById('box_' + fieldId);
+                let pill = box.querySelector('.avg-pill');
+                if (validNums.length > 0) {
+                    const avg = validNums.reduce((a, b) => a + b, 0) / validNums.length;
+                    const text = `Moyenne retenue (${validNums.length} pts) : ${avg.toFixed(2)} ${state.unit}`;
+                    if (pill) pill.textContent = text;
+                    else {
+                        pill = document.createElement('div');
+                        pill.className = 'avg-pill';
+                        pill.textContent = text;
+                        box.appendChild(pill);
+                    }
+                }
+            }
+            recalculate();
+        }
+
+        function updateSelectField(fieldId, val) {
+            state.inputs[fieldId] = [parseFloat(val)];
+            recalculate();
+        }
+
+        function resetInputs() {
+            const shape = SHAPES_DB[state.shapeId];
+            shape.fields.forEach(f => {
+                if (!f.isSelect) {
+                    state.inputs[f.id] = [''];
+                    state.multiEnabled[f.id] = false;
+                }
+            });
+            renderDynamicInputs();
+            recalculate();
+        }
+
+        function onMaterialChange() {
+            const mat = document.getElementById('materialType').value;
+            state.material = mat;
+            const voidWrap = document.getElementById('voidControlWrap');
+            const voidBox = document.getElementById('voidExplanation');
+
+            if (mat === 'moellon') {
+                voidWrap.style.opacity = '1';
+                voidWrap.style.pointerEvents = 'auto';
+                voidBox.classList.add('visible');
+            } else {
+                voidWrap.style.opacity = '0.5';
+                voidWrap.style.pointerEvents = 'none';
+                voidBox.classList.remove('visible');
+                document.getElementById('voidPercent').value = '0';
+            }
+            recalculate();
+        }
+
+        /* ----------------------------------------------------------------------
+           4. MOTEUR DE CALCUL INSTANTANÉ EN MÈTRES CUBES (m³)
+           ---------------------------------------------------------------------- */
+        function getNormalizedValuesInMeters() {
+            const shape = SHAPES_DB[state.shapeId];
+            const toMeters = state.unit === 'cm' ? 0.01 : 1;
+            const result = {};
+
+            shape.fields.forEach(f => {
+                if (f.isSelect) {
+                    result[f.id] = parseFloat(state.inputs[f.id][0]) || 0.5;
+                    return;
+                }
+                const isMulti = state.multiEnabled[f.id];
+                const count = isMulti ? (f.multiLabels ? f.multiLabels.length : 3) : 1;
+                const rawList = (state.inputs[f.id] || []).slice(0, count);
+                const validNums = rawList.map(v => parseFloat(v)).filter(n => !isNaN(n) && n >= 0);
+
+                if (validNums.length === 0) {
+                    result[f.id] = 0;
+                } else {
+                    const avg = validNums.reduce((a, b) => a + b, 0) / validNums.length;
+                    result[f.id] = avg * toMeters;
+                }
+            });
+
+            return result;
+        }
+
+        function recalculate() {
+            const shape = SHAPES_DB[state.shapeId];
+            const vals = getNormalizedValuesInMeters();
+            const calc = shape.compute(vals);
+            
+            let apparentVol = isNaN(calc.volume) ? 0 : Math.max(0, calc.volume);
+            const voidPct = state.material === 'moellon' ? parseFloat(document.getElementById('voidPercent').value) : 0;
+            const netVol = apparentVol * (1 - voidPct / 100);
+
+            // Affichage principal
+            const displayVol = voidPct > 0 ? netVol : apparentVol;
+            document.getElementById('volumeOutput').textContent = displayVol.toFixed(2);
+            
+            if (voidPct > 0) {
+                document.getElementById('resultTitleLabel').textContent = `Volume Plein Réel (Moellon -${voidPct}% vides)`;
+                document.getElementById('volumeSecondaryInfo').textContent = `Volume apparent encombré : ${apparentVol.toFixed(2)} m³ (dont ${(apparentVol - netVol).toFixed(2)} m³ de vide)`;
+            } else {
+                document.getElementById('resultTitleLabel').textContent = 'Volume Réel Calculé';
+                document.getElementById('volumeSecondaryInfo').textContent = `Matériau : ${getMaterialLabel(state.material)} • ${shape.name}`;
+            }
+
+            // Mise à jour du détail mathématique pas à pas
+            let fullSteps = calc.steps;
+            if (voidPct > 0) {
+                fullSteps += `\n5. Déduction vides moellon (${voidPct}%) = ${apparentVol.toFixed(3)} × ${(1 - voidPct/100).toFixed(2)} = ${netVol.toFixed(3)} m³ pleins`;
+            }
+            document.getElementById('formulaSteps').innerText = fullSteps;
+
+            // Vérification par rapport au Bon de Livraison attendu
+            updateComplianceBadge(displayVol);
+        }
+
+        function updateComplianceBadge(actualVol) {
+            const expectedInput = document.getElementById('expectedVolume').value;
+            const badge = document.getElementById('complianceBadge');
+            const expected = parseFloat(expectedInput);
+
+            if (isNaN(expected) || expected <= 0) {
+                badge.className = 'status-badge neutral';
+                badge.textContent = 'Contrôle libre';
+                return;
+            }
+
+            const diff = actualVol - expected;
+            const tolerance = expected * 0.03; // Tolérance chantier standard 3%
+
+            if (actualVol + tolerance >= expected) {
+                badge.className = 'status-badge ok';
+                badge.textContent = diff >= 0 ? `CONFORME (+${diff.toFixed(2)} m³)` : `CONFORME (${diff.toFixed(2)} m³)`;
+            } else {
+                badge.className = 'status-badge alert';
+                badge.textContent = `MANQUE ${Math.abs(diff).toFixed(2)} m³ !`;
+            }
+        }
+
+        function getMaterialLabel(key) {
+            const map = {
+                sable: 'Sable',
+                gravier: 'Gravier / Caillasse',
+                laterite: 'Latérite / Terre',
+                moellon: 'Moellons'
+            };
+            return map[key] || key;
+        }
+
+        /* ----------------------------------------------------------------------
+           5. LECTEUR D'ANIMATION TUTORIELLE 2D/3D ISOMÉTRIQUE (MÈTRE TIRANT)
+           ---------------------------------------------------------------------- */
+        function renderTutorialStepButtons() {
+            const shape = SHAPES_DB[state.shapeId];
+            const container = document.getElementById('animStepButtons');
+            container.innerHTML = shape.stepsTutorial.map((st, i) => `
+                <button type="button" class="step-btn ${i === animState.stepIndex ? 'active' : ''}" onclick="setAnimStep(${i})">
+                    ${st.title}
+                </button>
+            `).join('');
+        }
+
+        function setAnimStep(idx) {
+            animState.stepIndex = idx;
+            animState.progress = 0;
+            updateTutorialCaption();
+            renderTutorialStepButtons();
+        }
+
+        function focusAnimStep(fieldIdx, fieldId) {
+            animState.focusedField = fieldId;
+            const shape = SHAPES_DB[state.shapeId];
+            const mappedStep = Math.min(fieldIdx, shape.stepsTutorial.length - 1);
+            if (animState.stepIndex !== mappedStep) {
+                setAnimStep(mappedStep);
+            }
+        }
+
+        function updateTutorialCaption() {
+            const shape = SHAPES_DB[state.shapeId];
+            const total = shape.stepsTutorial.length;
+            const current = shape.stepsTutorial[animState.stepIndex] || shape.stepsTutorial[0];
+            document.getElementById('animStepPill').textContent = `ÉTAPE ${animState.stepIndex + 1}/${total}`;
+            document.getElementById('animCaptionText').textContent = current.text;
+        }
+
+        function toggleAnimation() {
+            animState.isPlaying = !animState.isPlaying;
+            document.getElementById('playIcon').textContent = animState.isPlaying ? '❚❚' : '▶';
+            document.getElementById('playLabel').textContent = animState.isPlaying ? 'Pause' : 'Lire';
+        }
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('tutorialCanvas');
+            if (!canvas) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+        }
+
+        function animationLoop(timestamp) {
+            if (!animState.lastTimestamp) animState.lastTimestamp = timestamp;
+            const dt = (timestamp - animState.lastTimestamp) / 1000;
+            animState.lastTimestamp = timestamp;
+
+            if (animState.isPlaying) {
+                animState.progress += dt * 0.38; // ~2.6 secondes par étape
+                if (animState.progress >= 1) {
+                    animState.progress = 0;
+                    const shape = SHAPES_DB[state.shapeId];
+                    animState.stepIndex = (animState.stepIndex + 1) % shape.stepsTutorial.length;
+                    updateTutorialCaption();
+                    renderTutorialStepButtons();
+                }
+            }
+
+            drawTutorialScene();
+            requestAnimationFrame(animationLoop);
+        }
+
+        /* Dessin pédagogique haute clarté avec Mètre Tirant Jaune animé */
+        function drawTutorialScene() {
+            const canvas = document.getElementById('tutorialCanvas');
+            if (!canvas || canvas.width === 0) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.width / dpr;
+            const H = canvas.height / dpr;
+
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, W, H);
+
+            // Grille de chantier discrète en arrière-plan
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 28) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y < H; y += 28) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            // Ligne de sol
+            const groundY = H * 0.78;
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(W * 0.08, groundY);
+            ctx.lineTo(W * 0.92, groundY);
+            ctx.stroke();
+
+            // Courbe d'animation fluide (aller-retour doux de 0 à 1)
+            const t = Math.min(1, animState.progress * 1.35);
+            const ease = 1 - Math.pow(1 - t, 3);
+
+            const cx = W * 0.5;
+            const step = animState.stepIndex;
+            const vals = getNormalizedValuesInMeters();
+
+            // Rendu spécifique selon la forme sélectionnée
+            switch (state.shapeId) {
+                case 'truck_flat':
+                    drawTruckScene(ctx, cx, groundY, W, H, ease, step, 'flat', vals);
+                    break;
+                case 'truck_dome':
+                    drawTruckScene(ctx, cx, groundY, W, H, ease, step, 'dome', vals);
+                    break;
+                case 'truck_irregular':
+                    drawTruckScene(ctx, cx, groundY, W, H, ease, step, 'slope', vals);
+                    break;
+                case 'ground_cone':
+                    drawGroundConeScene(ctx, cx, groundY, W, H, ease, step, vals);
+                    break;
+                case 'ground_trapezoid':
+                    drawGroundTrapezoidScene(ctx, cx, groundY, W, H, ease, step, vals);
+                    break;
+                case 'ground_dome':
+                    drawGroundDomeScene(ctx, cx, groundY, W, H, ease, step, vals);
+                    break;
+                case 'ground_wall':
+                    drawGroundWallScene(ctx, cx, groundY, W, H, ease, step, vals);
+                    break;
+            }
+
+            ctx.restore();
+        }
+
+        /* Helper : Dessiner le mètre tirant jaune réaliste avec boîtier et graduation */
+        function drawMeasuringTape(ctx, x1, y1, x2, y2, progress, labelText) {
+            const curX = x1 + (x2 - x1) * progress;
+            const curY = y1 + (y2 - y1) * progress;
+
+            // Ligne d'extension pointillée aux extrémités
+            ctx.save();
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // Ruban métallique jaune
+            ctx.save();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'butt';
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(curX, curY);
+            ctx.stroke();
+
+            // Graduations noires sur le ruban
+            const dist = Math.hypot(curX - x1, curY - y1);
+            const angle = Math.atan2(curY - y1, curX - x1);
+            ctx.translate(x1, y1);
+            ctx.rotate(angle);
+            ctx.fillStyle = '#1e293b';
+            for (let d = 8; d < dist - 6; d += 10) {
+                ctx.fillRect(d, -3, 1.5, d % 20 === 8 ? 4.5 : 2.5);
+            }
+
+            // Crochet métallique au point A (0)
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(-3, -5, 4, 10);
+
+            // Boîtier du mètre tirant dans la main au point B
+            ctx.fillStyle = '#006f78';
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(dist - 4, -12, 24, 22, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Étiquette de mesure flottante
+            if (labelText && progress > 0.15) {
+                const midX = (x1 + curX) / 2;
+                const midY = (y1 + curY) / 2 - 16;
+                ctx.save();
+                ctx.font = 'bold 12px "JetBrains Mono", monospace';
+                const textW = ctx.measureText(labelText).width + 14;
+                ctx.fillStyle = '#0f172a';
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(midX - textW / 2, midY - 12, textW, 22, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#facc15';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, midX, midY - 1);
+                ctx.restore();
+            }
+        }
+
+        /* Scène 1 : Camion Benne (Pleine, Dôme ou Pente) */
+        function drawTruckScene(ctx, cx, groundY, W, H, ease, step, mode, vals) {
+            const boxW = Math.min(230, W * 0.52);
+            const boxH = 74;
+            const boxX = cx - boxW * 0.35;
+            const boxY = groundY - 26 - boxH;
+
+            // Cabine du camion (à gauche)
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(boxX - 58, boxY + 18, 52, boxH - 18, [12, 4, 4, 4]);
+            ctx.fill();
+            ctx.stroke();
+            // Pare-brise
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(boxX - 52, boxY + 25, 32, 22);
+
+            // Matériau à l'intérieur de la benne (Sable/Gravier doré/ocre)
+            ctx.fillStyle = 'rgba(217, 119, 6, 0.75)';
+            ctx.beginPath();
+            if (mode === 'flat') {
+                ctx.rect(boxX + 3, boxY + 6, boxW - 6, boxH - 8);
+            } else if (mode === 'dome') {
+                ctx.moveTo(boxX + 3, boxY + boxH - 2);
+                ctx.lineTo(boxX + 3, boxY + 14);
+                ctx.quadraticCurveTo(boxX + boxW / 2, boxY - 28, boxX + boxW - 3, boxY + 14);
+                ctx.lineTo(boxX + boxW - 3, boxY + boxH - 2);
+            } else {
+                // Pente avant -> arrière
+                ctx.moveTo(boxX + 3, boxY + boxH - 2);
+                ctx.lineTo(boxX + 3, boxY + 6);
+                ctx.lineTo(boxX + boxW / 2, boxY + 26);
+                ctx.lineTo(boxX + boxW - 3, boxY + 48);
+                ctx.lineTo(boxX + boxW - 3, boxY + boxH - 2);
+            }
+            ctx.fill();
+
+            // Parois de la benne
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+            // Roues du camion
+            [boxX - 32, boxX + boxW * 0.25, boxX + boxW * 0.78].forEach(wx => {
+                ctx.fillStyle = '#090d11';
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(wx, groundY - 14, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            // Animation du mètre tirant selon l'étape
+            if (step === 0) {
+                // Mesure Longueur L
+                drawMeasuringTape(ctx, boxX, boxY - 16, boxX + boxW, boxY - 16, ease, `L = ${(vals.L || 0).toFixed(2)}m`);
+            } else if (step === 1) {
+                if (mode === 'dome') {
+                    // Hauteur bords Hb
+                    drawMeasuringTape(ctx, boxX + 16, boxY + boxH, boxX + 16, boxY + 14, ease, `Hb = ${(vals.Hb || 0).toFixed(2)}m`);
+                } else if (mode === 'slope') {
+                    // Hauteur avant H1
+                    drawMeasuringTape(ctx, boxX + 18, boxY + boxH, boxX + 18, boxY + 6, ease, `H1 = ${(vals.H_av || 0).toFixed(2)}m`);
+                } else {
+                    // Largeur en perspective simulée
+                    drawMeasuringTape(ctx, boxX + boxW - 25, boxY + 22, boxX + boxW + 25, boxY - 8, ease, `l = ${(vals.W || 0).toFixed(2)}m`);
+                }
+            } else {
+                if (mode === 'dome') {
+                    // Hauteur sommet Hc
+                    drawMeasuringTape(ctx, boxX + boxW / 2, boxY + boxH, boxX + boxW / 2, boxY - 14, ease, `Hc = ${(vals.Hc || 0).toFixed(2)}m`);
+                } else if (mode === 'slope') {
+                    // Hauteur milieu & arrière
+                    drawMeasuringTape(ctx, boxX + boxW * 0.5, boxY + boxH, boxX + boxW * 0.5, boxY + 26, ease, `H2 = ${(vals.H_mil || 0).toFixed(2)}m`);
+                } else {
+                    // Hauteur H
+                    drawMeasuringTape(ctx, boxX + boxW * 0.5, boxY + boxH, boxX + boxW * 0.5, boxY + 6, ease, `H = ${(vals.H || 0).toFixed(2)}m`);
+                }
+            }
+        }
+
+        /* Scène 2 : Tas Conique au sol (Périmètre + Hauteur) */
+        function drawGroundConeScene(ctx, cx, groundY, W, H, ease, step, vals) {
+            const baseR = Math.min(115, W * 0.28);
+            const peakY = groundY - 105;
+
+            // Ombre elliptique de base au sol
+            ctx.fillStyle = 'rgba(0, 150, 163, 0.15)';
+            ctx.beginPath();
+            ctx.ellipse(cx, groundY, baseR, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Corps du tas conique
+            const grad = ctx.createLinearGradient(cx - baseR, peakY, cx + baseR, groundY);
+            grad.addColorStop(0, '#d97706');
+            grad.addColorStop(1, '#78350f');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(cx - baseR, groundY);
+            ctx.lineTo(cx, peakY);
+            ctx.lineTo(cx + baseR, groundY);
+            ctx.ellipse(cx, groundY, baseR, 18, 0, 0, Math.PI, false);
+            ctx.fill();
+
+            if (step === 0) {
+                // Animation du mètre qui fait le tour complet au sol (Périmètre P)
+                ctx.save();
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.ellipse(cx, groundY, baseR + 4, 21, 0, 0, Math.PI * 2 * ease);
+                ctx.stroke();
+                ctx.restore();
+
+                drawMeasuringTape(ctx, cx - baseR, groundY + 26, cx + baseR, groundY + 26, ease, `Tour P = ${(vals.P || 0).toFixed(2)}m`);
+            } else if (step === 1) {
+                // Règle horizontale posée au sommet
+                drawMeasuringTape(ctx, cx - 55, peakY, cx + 65, peakY, ease, 'Niveau au sommet');
+            } else {
+                // Mesure verticale de la hauteur H
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(cx, peakY);
+                ctx.lineTo(cx + baseR + 20, peakY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                drawMeasuringTape(ctx, cx + baseR + 15, groundY, cx + baseR + 15, peakY, ease, `H = ${(vals.H || 0).toFixed(2)}m`);
+            }
+        }
+
+        /* Scène 3 : Tas Allongé Trapézoïdal (Cordon) */
+        function drawGroundTrapezoidScene(ctx, cx, groundY, W, H, ease, step, vals) {
+            const halfB = Math.min(130, W * 0.32);
+            const halfb = halfB * 0.42;
+            const topY = groundY - 88;
+
+            // Trapèze de profil
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.moveTo(cx - halfB, groundY);
+            ctx.lineTo(cx - halfb, topY);
+            ctx.lineTo(cx + halfb, topY);
+            ctx.lineTo(cx + halfB, groundY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (step === 0) {
+                drawMeasuringTape(ctx, cx - halfB, groundY + 18, cx + halfB, groundY + 18, ease, `Longueur L = ${(vals.L || 0).toFixed(2)}m`);
+            } else if (step === 1) {
+                drawMeasuringTape(ctx, cx - halfB, groundY - 8, cx + halfB, groundY - 8, ease, `Base B = ${(vals.B || 0).toFixed(2)}m`);
+                drawMeasuringTape(ctx, cx - halfb, topY - 12, cx + halfb, topY - 12, ease, `Sommet b = ${(vals.b || 0).toFixed(2)}m`);
+            } else {
+                drawMeasuringTape(ctx, cx, groundY, cx, topY, ease, `H = ${(vals.H || 0).toFixed(2)}m`);
+            }
+        }
+
+        /* Scène 4 : Tas Étalé / Dôme Ovale */
+        function drawGroundDomeScene(ctx, cx, groundY, W, H, ease, step, vals) {
+            const rx = Math.min(135, W * 0.34);
+            const ry = 82;
+
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.ellipse(cx, groundY, rx, ry, 0, Math.PI, 0, false);
+            ctx.fill();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (step === 0) {
+                drawMeasuringTape(ctx, cx - rx, groundY + 16, cx + rx, groundY + 16, ease, `Grand axe L = ${(vals.L || 0).toFixed(2)}m`);
+            } else if (step === 1) {
+                drawMeasuringTape(ctx, cx - rx * 0.45, groundY - 15, cx + rx * 0.45, groundY + 15, ease, `Largeur l = ${(vals.W || 0).toFixed(2)}m`);
+            } else {
+                drawMeasuringTape(ctx, cx, groundY, cx, groundY - ry, ease, `H = ${(vals.H || 0).toFixed(2)}m`);
+            }
+        }
+
+        /* Scène 5 : Tas contre un Mur / Angle */
+        function drawGroundWallScene(ctx, cx, groundY, W, H, ease, step, vals) {
+            const wallX = cx - Math.min(95, W * 0.24);
+            const reach = Math.min(155, W * 0.38);
+            const topY = groundY - 105;
+
+            // Mur en béton à gauche
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(wallX - 18, topY - 25, 18, groundY - topY + 25);
+            ctx.strokeStyle = '#64748b';
+            ctx.strokeRect(wallX - 18, topY - 25, 18, groundY - topY + 25);
+
+            // Tas adossé au mur
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.moveTo(wallX, groundY);
+            ctx.lineTo(wallX, topY);
+            ctx.quadraticCurveTo(wallX + reach * 0.45, topY + 10, wallX + reach, groundY);
+            ctx.closePath();
+            ctx.fill();
+
+            if (step === 0) {
+                drawMeasuringTape(ctx, wallX, groundY + 18, wallX + reach, groundY + 18, ease, `Avancée R = ${(vals.R || 0).toFixed(2)}m`);
+            } else {
+                drawMeasuringTape(ctx, wallX + 12, groundY, wallX + 12, topY, ease, `H mur = ${(vals.H || 0).toFixed(2)}m`);
+            }
+        }
+
+        /* ----------------------------------------------------------------------
+           6. HISTORIQUE LOCAL & EXPORT RAPPORT CHANTIER (WHATSAPP / SMS)
+           ---------------------------------------------------------------------- */
+        function saveToHistory() {
+            const shape = SHAPES_DB[state.shapeId];
+            const volText = document.getElementById('volumeOutput').textContent;
+            const volNum = parseFloat(volText);
+
+            if (isNaN(volNum) || volNum <= 0) {
+                showToast('Saisissez des mesures valides avant de enregistrer.');
+                return;
+            }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const statusText = document.getElementById('complianceBadge').textContent;
+
+            const record = {
+                id: Date.now(),
+                time: timeStr,
+                material: getMaterialLabel(state.material),
+                shapeName: shape.name,
+                volume: volText,
+                status: statusText,
+                steps: document.getElementById('formulaSteps').innerText
+            };
+
+            state.history.unshift(record);
+            try {
+                localStorage.setItem('cubagepro_history', JSON.stringify(state.history.slice(0, 30)));
+            } catch (e) {}
+
+            renderHistory();
+            showToast(`Réception de ${volText} m³ enregistrée.`);
+        }
+
+        function loadHistoryFromStorage() {
+            try {
+                const raw = localStorage.getItem('cubagepro_history');
+                if (raw) state.history = JSON.parse(raw);
+            } catch (e) {
+                state.history = [];
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            document.getElementById('historyCount').textContent = state.history.length;
+
+            if (state.history.length === 0) {
+                list.innerHTML = `<p style="font-size: 0.8rem; color: var(--text-dim); text-align: center; padding: 14px 0;">
+                    Aucune livraison validée aujourd'hui. Cliquez sur « Valider » après chaque mesure.
+                </p>`;
+                return;
+            }
+
+            list.innerHTML = state.history.map(item => `
+                <div class="history-item">
+                    <div class="history-info">
+                        <h4>${item.material} — ${item.shapeName}</h4>
+                        <p>${item.time} • Statut : <strong>${item.status}</strong></p>
+                    </div>
+                    <div class="history-vol">${item.volume} m³</div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            state.history = [];
+            try { localStorage.removeItem('cubagepro_history'); } catch (e) {}
+            renderHistory();
+            showToast('Historique effacé.');
+        }
+
+        function copyReport() {
+            const shape = SHAPES_DB[state.shapeId];
+            const volText = document.getElementById('volumeOutput').textContent;
+            const statusText = document.getElementById('complianceBadge').textContent;
+            const steps = document.getElementById('formulaSteps').innerText;
+            const dateStr = new Date().toLocaleDateString('fr-FR');
+
+            const report = [
+                `RAPPORT DE RECEPTION MATERIAUX (${dateStr})`,
+                `----------------------------------------`,
+                `Materiau : ${getMaterialLabel(state.material)}`,
+                `Configuration : ${shape.name}`,
+                `Volume mesure : ${volText} m3`,
+                `Controle livraison : ${statusText}`,
+                `Detail du calcul :`,
+                steps
+            ].join('\n');
+
+            // Copie compatible iFrame et mobile via textarea temporaire
+            const ta = document.createElement('textarea');
+            ta.value = report;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('Rapport copié ! Prêt à coller sur WhatsApp.');
+            } catch (err) {
+                showToast('Impossible de copier automatiquement.');
+            }
+            document.body.removeChild(ta);
+        }
+
+        /* ----------------------------------------------------------------------
+           7. NAVIGATION MOBILE STYLE ANDROID & NOTIFICATIONS TOAST
+           ---------------------------------------------------------------------- */
+        function switchMobileTab(tabName) {
+            const tabs = ['measure', 'tutorial', 'logic'];
+            tabs.forEach(t => {
+                const sec = document.getElementById('tab-' + t);
+                const nav = document.getElementById('nav-' + t);
+                if (t === tabName) {
+                    sec.classList.remove('mobile-hidden');
+                    nav.classList.add('active');
+                } else {
+                    sec.classList.add('mobile-hidden');
+                    nav.classList.remove('active');
+                }
+            });
+
+            if (tabName === 'tutorial') {
+                setTimeout(resizeCanvas, 30);
+            }
+        }
+
+        // Initialiser l'affichage mobile par défaut au chargement
+        if (window.innerWidth < 1024) {
+            switchMobileTab('measure');
+        }
+
+        let toastTimer = null;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+        }
+    </script>
+</body>
+</html>
