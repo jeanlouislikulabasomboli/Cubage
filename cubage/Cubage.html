@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>CUBAGE — Mesure ton volume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root{
+  --bg:#1C1F22;
+  --bg-elev:#262A2E;
+  --bg-elev2:#2F343A;
+  --line:#3B4147;
+  --line-strong:#565D64;
+  --text:#F3F1EA;
+  --text-dim:#9CA3AA;
+  --accent:#FFB400;
+  --accent-ink:#1C1F22;
+  --steel:#6FA8CC;
+  --ok:#4CAF7D;
+  --ok-ink:#0E1A14;
+  --warn:#E2574C;
+  --radius-s:10px;
+  --radius-m:16px;
+  --radius-l:22px;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:#101214;
+  color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+h1,h2,h3,.num,.display-num{font-family:'Oswald',sans-serif;}
+
+#shell{
+  position:relative;
+  width:100%;
+  height:100dvh;
+  max-width:460px;
+  margin:0 auto;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+@media (min-width:640px){
+  body{display:flex; align-items:center; justify-content:center; padding:28px;}
+  #shell{
+    height:min(860px,94dvh);
+    border-radius:38px;
+    box-shadow:0 0 0 10px #05060780, 0 30px 70px -20px rgba(0,0,0,.7), 0 0 0 1px #000;
+    border:1px solid #000;
+  }
+  #shell::before{
+    content:"";
+    position:absolute;
+    top:10px; left:50%; transform:translateX(-50%);
+    width:90px; height:5px; border-radius:4px;
+    background:#0b0c0d;
+    z-index:50;
+  }
+}
+
+/* ---------- Header ---------- */
+header{
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 18px 10px;
+  gap:10px;
+}
+.brand{display:flex; align-items:center; gap:9px;}
+.brand-mark{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent-ink);font-family:'Oswald'; font-weight:700; font-size:15px;
+  flex:none;
+}
+.brand-name{font-family:'Oswald'; font-weight:600; font-size:19px; letter-spacing:.3px;}
+.header-actions{display:flex; gap:8px; align-items:center;}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--bg-elev2); border:1px solid var(--line);
+  color:var(--text); display:flex;align-items:center;justify-content:center;
+  font-size:16px; cursor:pointer;
+}
+.unit-toggle{
+  display:flex; background:var(--bg-elev2); border:1px solid var(--line);
+  border-radius:10px; overflow:hidden; font-size:12px; font-weight:700;
+}
+.unit-toggle button{
+  border:none;background:transparent;color:var(--text-dim);
+  padding:8px 10px; font:inherit; font-weight:700; cursor:pointer;
+}
+.unit-toggle button.active{background:var(--accent); color:var(--accent-ink);}
+
+/* ---------- Ruler progress ---------- */
+.ruler{
+  flex:none;
+  display:flex;
+  align-items:flex-end;
+  gap:3px;
+  padding:4px 18px 14px;
+  height:30px;
+}
+.ruler i{flex:1; height:8px; background:var(--line); border-radius:1px;}
+.ruler i:nth-child(5n+1){height:16px; background:var(--line-strong);}
+.ruler i.done{background:var(--accent);}
+.ruler i.current{background:var(--accent); height:20px; box-shadow:0 0 0 2px var(--accent) inset;}
+
+/* ---------- Main scroll area ---------- */
+main{
+  flex:1;
+  overflow-y:auto;
+  padding:4px 18px 18px;
+  -webkit-overflow-scrolling:touch;
+}
+.screen{display:none; animation:fadein .25s ease;}
+.screen.active{display:block;}
+@keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+p.lead{color:var(--text-dim); font-size:14.5px; line-height:1.5; margin:2px 0 18px;}
+h1.title{font-size:25px; font-weight:600; margin:6px 0 4px; letter-spacing:.2px;}
+h2.section-title{font-size:13px; text-transform:none; color:var(--text-dim); font-weight:700; margin:22px 0 10px; letter-spacing:.2px;}
+
+/* ---------- Big choice cards (home) ---------- */
+.choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;}
+.choice-card{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-l);
+  padding:18px 14px; cursor:pointer; text-align:left;
+  display:flex; flex-direction:column; gap:10px; min-height:148px;
+  transition:border-color .15s, transform .1s;
+}
+.choice-card:active{transform:scale(.97);}
+.choice-card:hover{border-color:var(--line-strong);}
+.choice-card .pic{width:100%; height:56px;}
+.choice-card .pic svg{width:100%; height:100%;}
+.choice-card .ctitle{font-weight:700; font-size:15px;}
+.choice-card .csub{font-size:12px; color:var(--text-dim); line-height:1.4;}
+
+.tip-card{
+  margin-top:16px; background:var(--bg-elev); border:1px dashed var(--line-strong);
+  border-radius:var(--radius-m); padding:14px 16px; display:flex; gap:12px; align-items:center;
+  cursor:pointer;
+}
+.tip-card .ic{font-size:22px;}
+.tip-card .tt{font-weight:700; font-size:13.5px;}
+.tip-card .ts{font-size:12px; color:var(--text-dim);}
+
+/* ---------- Shape list ---------- */
+.shape-card{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:14px; margin-bottom:12px; display:flex; gap:13px; align-items:flex-start;
+  cursor:pointer;
+}
+.shape-card:active{transform:scale(.985);}
+.shape-card .thumb{
+  width:66px; height:66px; flex:none; border-radius:12px; background:var(--bg-elev2);
+  border:1px solid var(--line); overflow:hidden;
+}
+.shape-card .thumb svg{width:100%; height:100%;}
+.shape-card .body{flex:1; min-width:0;}
+.shape-card .sname{font-weight:700; font-size:15px; margin-bottom:3px;}
+.shape-card .sdesc{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
+.shape-card .when{
+  margin-top:8px; font-size:11.5px; color:var(--steel); background:rgba(111,168,204,.1);
+  border-radius:7px; padding:6px 8px; line-height:1.4; display:none;
+}
+.shape-card.open .when{display:block;}
+.shape-card .infobtn{
+  flex:none; width:26px; height:26px; border-radius:8px; background:var(--bg-elev2);
+  border:1px solid var(--line); color:var(--text-dim); font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* ---------- Measure wizard ---------- */
+.stage-wrap{
+  background:#15171A; border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:10px; margin-bottom:16px;
+}
+.stage-wrap svg{width:100%; height:auto; display:block;}
+.replay-row{display:flex; justify-content:flex-end; margin-top:-6px; margin-bottom:14px;}
+.replay-btn{
+  font-size:11.5px; color:var(--text-dim); background:none; border:none; cursor:pointer;
+  display:flex; align-items:center; gap:5px;
+}
+.field-label{font-size:17px; font-weight:700; margin-bottom:6px;}
+.field-help{font-size:13px; color:var(--text-dim); line-height:1.45; margin-bottom:16px;}
+
+.num-input-row{
+  display:flex; align-items:stretch; gap:10px; margin-bottom:8px;
+}
+.num-input{
+  flex:1; font-family:'Oswald'; font-size:40px; font-weight:600; color:var(--text);
+  background:var(--bg-elev); border:2px solid var(--line); border-radius:var(--radius-m);
+  padding:10px 16px; width:100%; text-align:left; -moz-appearance:textfield;
+}
+.num-input:focus{outline:none; border-color:var(--accent);}
+.num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+.unit-pill{
+  flex:none; align-self:center; font-family:'Oswald'; font-size:18px; color:var(--text-dim);
+  padding:0 4px;
+}
+.field-error{color:var(--warn); font-size:12.5px; font-weight:600; min-height:16px; margin-bottom:10px;}
+
+.choice-row{display:flex; flex-direction:column; gap:10px; margin-bottom:10px;}
+.choice-btn{
+  background:var(--bg-elev); border:2px solid var(--line); border-radius:var(--radius-m);
+  padding:16px; text-align:left; font-size:15px; font-weight:700; color:var(--text); cursor:pointer;
+}
+.choice-btn:active{transform:scale(.98);}
+.choice-btn.sel{border-color:var(--accent); background:rgba(255,180,0,.08);}
+
+.nav-row{display:flex; gap:10px; margin-top:16px;}
+.btn{
+  flex:1; border:none; border-radius:var(--radius-m); padding:15px 16px; font:inherit;
+  font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-primary{background:var(--accent); color:var(--accent-ink);}
+.btn-primary:active{transform:scale(.97);}
+.btn-ghost{background:var(--bg-elev2); color:var(--text); border:1px solid var(--line); flex:0 0 52px;}
+.btn-secondary{background:var(--bg-elev2); color:var(--text); border:1px solid var(--line);}
+.btn-full{width:100%;}
+
+/* ---------- Result ---------- */
+.result-hero{
+  background:linear-gradient(165deg, var(--bg-elev2), var(--bg-elev));
+  border:1px solid var(--line); border-radius:var(--radius-l);
+  padding:26px 20px; text-align:center; margin-bottom:16px;
+}
+.result-hero .rl{font-size:12.5px; color:var(--text-dim); font-weight:700; margin-bottom:6px;}
+.result-hero .rv{font-family:'Oswald'; font-size:52px; font-weight:700; color:var(--accent); line-height:1;}
+.result-hero .ru{font-size:15px; color:var(--text-dim); margin-top:2px;}
+.result-hero .req{font-size:12px; color:var(--text-dim); margin-top:12px;}
+
+.disclosure{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-m);
+  margin-bottom:12px; overflow:hidden;
+}
+.disclosure summary{
+  list-style:none; cursor:pointer; padding:14px 16px; font-weight:700; font-size:14px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.disclosure summary::-webkit-details-marker{display:none;}
+.disclosure summary .chev{transition:transform .2s; color:var(--text-dim);}
+.disclosure[open] summary .chev{transform:rotate(180deg);}
+.disclosure .inner{padding:0 16px 16px; font-size:13.5px; line-height:1.65; color:var(--text-dim);}
+.disclosure .inner .calc-line{
+  font-family:'Oswald'; color:var(--accent); font-size:14.5px; margin-top:10px; padding:10px 12px;
+  background:rgba(255,180,0,.08); border-radius:9px; word-break:break-word;
+}
+.disclosure .inner b{color:var(--text);}
+
+/* ---------- Zones / summary ---------- */
+.zone-row{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:12px 14px; display:flex; align-items:center; gap:12px; margin-bottom:10px;
+}
+.zone-row .zi{flex:1; min-width:0;}
+.zone-row .zname{font-weight:700; font-size:14px;}
+.zone-row .zloc{font-size:11.5px; color:var(--text-dim);}
+.zone-row .zval{font-family:'Oswald'; font-weight:600; font-size:17px; color:var(--accent); flex:none;}
+.zone-row .zdel{
+  flex:none; width:30px;height:30px;border-radius:9px; background:var(--bg-elev2); border:1px solid var(--line);
+  color:var(--warn); font-weight:700; cursor:pointer;
+}
+
+/* ---------- Bottom sticky bar ---------- */
+#totalbar{
+  flex:none; display:none; align-items:center; gap:10px;
+  padding:12px 18px calc(14px + env(safe-area-inset-bottom));
+  background:var(--bg-elev); border-top:1px solid var(--line);
+}
+#totalbar.show{display:flex;}
+#totalbar .tb-info{flex:1; min-width:0;}
+#totalbar .tb-label{font-size:11px; color:var(--text-dim); font-weight:700;}
+#totalbar .tb-val{font-family:'Oswald'; font-size:22px; font-weight:700; color:var(--ok);}
+#totalbar button{flex:none;}
+
+/* ---------- Sheet / overlay ---------- */
+.overlay{
+  position:absolute; inset:0; background:rgba(8,9,10,.6); display:none;
+  align-items:flex-end; z-index:100;
+}
+.overlay.show{display:flex;}
+.sheet{
+  background:var(--bg-elev); width:100%; max-height:86%; overflow-y:auto;
+  border-radius:24px 24px 0 0; padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line-strong);
+  animation:sheetup .22s ease;
+}
+@keyframes sheetup{from{transform:translateY(16px); opacity:.5;} to{transform:translateY(0); opacity:1;}}
+.sheet .sheet-handle{width:40px; height:4px; background:var(--line-strong); border-radius:3px; margin:0 auto 16px;}
+.sheet h3{font-size:18px; margin:0 0 4px;}
+.sheet .step-tip{display:flex; gap:12px; margin-bottom:16px; align-items:flex-start;}
+.sheet .step-tip .n{
+  flex:none; width:26px;height:26px;border-radius:50%; background:var(--accent); color:var(--accent-ink);
+  display:flex;align-items:center;justify-content:center; font-weight:700; font-size:13px;
+}
+.sheet .step-tip p{margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.5;}
+.sheet .step-tip strong{color:var(--text);}
+
+/* ---------- misc ---------- */
+.row-between{display:flex; align-items:center; justify-content:space-between;}
+.muted{color:var(--text-dim);}
+.badge{
+  display:inline-block; font-size:11px; font-weight:700; color:var(--steel);
+  background:rgba(111,168,204,.12); padding:4px 9px; border-radius:7px; margin-bottom:10px;
+}
+::selection{background:var(--accent); color:var(--accent-ink);}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"></path>
+    </marker>
+  </defs>
+</svg>
+
+<div id="shell">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div class="brand-name">CUBAGE</div>
+    </div>
+    <div class="header-actions">
+      <div class="unit-toggle" id="unitToggle">
+        <button data-u="m" class="active">m</button>
+        <button data-u="cm">cm</button>
+      </div>
+      <button class="icon-btn" id="helpBtn" title="Aide">?</button>
+    </div>
+  </header>
+
+  <div class="ruler" id="rulerBar"></div>
+
+  <main id="main">
+
+    <!-- SCREEN: HOME -->
+    <section class="screen" id="screen-home">
+      <h1 class="title">Où est le matériau ?</h1>
+      <p class="lead">Choisis la situation qui correspond à ce que tu as sous les yeux, puis on passera à la forme du tas.</p>
+
+      <div class="choice-grid">
+        <button class="choice-card" data-loc="sol">
+          <div class="pic">
+            <svg viewBox="0 0 100 50"><line x1="6" y1="42" x2="94" y2="42" stroke="#565D64" stroke-width="2"/><path d="M20 42 L48 14 L78 42 Z" fill="rgba(255,180,0,.12)" stroke="#FFB400" stroke-width="2.5"/></svg>
+          </div>
+          <div class="ctitle">Sur le sol</div>
+          <div class="csub">Un tas déposé directement par terre.</div>
+        </button>
+        <button class="choice-card" data-loc="benne">
+          <div class="pic">
+            <svg viewBox="0 0 100 50"><path d="M14 18 L86 18 L78 44 L22 44 Z" fill="rgba(111,168,204,.12)" stroke="#6FA8CC" stroke-width="2.5"/><line x1="22" y1="44" x2="78" y2="44" stroke="#6FA8CC" stroke-width="2.5"/></svg>
+          </div>
+          <div class="ctitle">Dans une benne</div>
+          <div class="csub">Un conteneur, un camion, une remorque.</div>
+        </button>
+      </div>
+
+      <div class="tip-card" id="tapeTip">
+        <div class="ic">📏</div>
+        <div>
+          <div class="tt">Comment bien utiliser ton mètre tirant</div>
+          <div class="ts">Un rappel rapide avant de mesurer — touche ici</div>
+        </div>
+      </div>
+
+      <h2 class="section-title" id="zonesTitleHome" style="display:none">Zones déjà mesurées</h2>
+      <div id="homeZonesList"></div>
+    </section>
+
+    <!-- SCREEN: SHAPES -->
+    <section class="screen" id="screen-shapes">
+      <button class="icon-btn" style="margin-bottom:12px" data-back="screen-home">←</button>
+      <h1 class="title" id="shapesTitle">Quelle est la forme du tas ?</h1>
+      <p class="lead">Regarde ton tas et choisis le dessin qui lui ressemble le plus. Touche le <b>ⓘ</b> si tu hésites entre deux formes.</p>
+      <div id="shapesList"></div>
+    </section>
+
+    <!-- SCREEN: MEASURE -->
+    <section class="screen" id="screen-measure">
+      <button class="icon-btn" style="margin-bottom:4px" id="measureBack">←</button>
+      <div class="stage-wrap" id="stageWrap"></div>
+      <div class="replay-row">
+        <button class="replay-btn" id="replayBtn">↻ Rejouer l'animation</button>
+      </div>
+      <div id="fieldZone"></div>
+    </section>
+
+    <!-- SCREEN: RESULT -->
+    <section class="screen" id="screen-result">
+      <h1 class="title">Résultat de cette zone</h1>
+      <div class="result-hero">
+        <div class="rl" id="resultShapeName">TAS CONIQUE</div>
+        <div class="rv" id="resultValue">0,00</div>
+        <div class="ru">mètres cubes (m³)</div>
+        <div class="req" id="resultEquiv"></div>
+      </div>
+
+      <details class="disclosure">
+        <summary>Voir comment ce chiffre a été trouvé <span class="chev">▾</span></summary>
+        <div class="inner" id="explainBox"></div>
+      </details>
+
+      <button class="btn btn-primary btn-full" id="addZoneBtn" style="margin-bottom:10px">+ Ajouter cette zone au total</button>
+      <button class="btn btn-secondary btn-full" id="redoBtn" style="margin-bottom:10px">Refaire cette mesure</button>
+      <button class="btn btn-secondary btn-full" id="newCalcBtn">Nouveau calcul (sans ajouter)</button>
+    </section>
+
+    <!-- SCREEN: SUMMARY -->
+    <section class="screen" id="screen-summary">
+      <button class="icon-btn" style="margin-bottom:12px" data-back="screen-home">←</button>
+      <h1 class="title">Total du chantier</h1>
+      <p class="lead">Chaque zone mesurée s'additionne ici. Tu peux en supprimer une si tu t'es trompé.</p>
+      <div id="summaryList"></div>
+      <div class="result-hero" style="margin-top:6px">
+        <div class="rl">TOTAL CUMULÉ</div>
+        <div class="rv" id="summaryTotal">0,00</div>
+        <div class="ru">mètres cubes (m³)</div>
+      </div>
+      <button class="btn btn-primary btn-full" id="copyBtn" style="margin-bottom:10px">📋 Copier le résultat</button>
+      <button class="btn btn-secondary btn-full" id="resetAllBtn">Tout effacer et recommencer</button>
+    </section>
+
+  </main>
+
+  <div id="totalbar">
+    <div class="tb-info">
+      <div class="tb-label">TOTAL CUMULÉ · <span id="tbCount">0</span> zone(s)</div>
+      <div class="tb-val"><span id="tbVal">0,00</span> m³</div>
+    </div>
+    <button class="btn btn-secondary" id="tbSeeBtn">Détail</button>
+  </div>
+
+  <!-- Overlay: tape tip -->
+  <div class="overlay" id="overlayTape">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3>Bien utiliser ton mètre tirant</h3>
+      <p class="muted" style="font-size:13px; margin-top:0">Trois réflexes qui évitent 90% des erreurs de mesure sur chantier.</p>
+      <div class="step-tip">
+        <div class="n">1</div>
+        <p><strong>Pose le zéro bien au bord.</strong> Le crochet métallique au bout du mètre doit toucher exactement le point de départ de ta mesure — pas un centimètre avant ou après.</p>
+      </div>
+      <div class="step-tip">
+        <div class="n">2</div>
+        <p><strong>Tire à l'horizontale ou à la verticale, jamais en biais.</strong> Si le mètre penche, ta mesure sera fausse — plus longue que la vraie distance.</p>
+      </div>
+      <div class="step-tip">
+        <div class="n">3</div>
+        <p><strong>Lis au plus près, pas au plus loin.</strong> En cas de doute entre deux graduations, choisis toujours la plus petite valeur : mieux vaut sous-estimer que surestimer une livraison.</p>
+      </div>
+      <button class="btn btn-primary btn-full" data-close-overlay>J'ai compris</button>
+    </div>
+  </div>
+
+  <!-- Overlay: shape info -->
+  <div class="overlay" id="overlayInfo">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 id="infoTitle">Forme</h3>
+      <p class="muted" id="infoBody" style="font-size:13.5px; line-height:1.6;"></p>
+      <button class="btn btn-primary btn-full" data-close-overlay>Fermer</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  unit: 'm',          // 'm' or 'cm'
+  loc: null,          // 'sol' | 'benne'
+  shape: null,        // current shape object
+  stepIndex: 0,
+  values: {},         // collected field values (in display unit)
+  zones: [],          // {name, loc, m3}
+  history: ['screen-home']
+};
+
+/* ============================================================
+   SVG HELPERS (blueprint-style animated diagrams)
+   ============================================================ */
+function groundHatch(x1,x2,y){
+  let ticks='';
+  for(let x=x1;x<=x2;x+=10){
+    ticks += `<line x1="${x}" y1="${y}" x2="${x-6}" y2="${y+8}" stroke="var(--line-strong)" stroke-width="1.5"/>`;
+  }
+  return `<line x1="${x1-4}" y1="${y}" x2="${x2+4}" y2="${y}" stroke="var(--line-strong)" stroke-width="2"/>${ticks}`;
+}
+function wallHatch(x,y1,y2){
+  let ticks='';
+  for(let y=y1;y<=y2;y+=10){
+    ticks += `<line x1="${x}" y1="${y}" x2="${x-8}" y2="${y+6}" stroke="var(--line-strong)" stroke-width="1.5"/>`;
+  }
+  return `<line x1="${x}" y1="${y1-4}" x2="${x}" y2="${y2+4}" stroke="var(--line-strong)" stroke-width="2"/>${ticks}`;
+}
+function outline(points, fillOpacity){
+  return `<polygon points="${points}" fill="rgba(255,180,0,${fillOpacity||0.07})" stroke="var(--text-dim)" stroke-width="2"/>`;
+}
+// Animated measurement line + moving tape marker + label
+function mLine(x1,y1,x2,y2,label,dur){
+  dur = dur || 2.6;
+  const labelX = (x1+x2)/2, labelY = (y1+y2)/2;
+  const perpOffX = (y1===y2) ? 0 : -16;
+  const perpOffY = (y1===y2) ? -12 : 0;
+  return `
+  <g>
+    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" pathLength="100"
+          stroke="var(--accent)" stroke-width="3" fill="none"
+          stroke-dasharray="100" marker-start="url(#arrow)" marker-end="url(#arrow)">
+      <animate attributeName="stroke-dashoffset" values="100;0;0;100" keyTimes="0;0.4;0.75;1" dur="${dur}s" repeatCount="indefinite"/>
+    </line>
+    <circle r="6.5" fill="var(--accent-ink)" stroke="var(--accent)" stroke-width="2.5">
+      <animate attributeName="cx" values="${x1};${x2};${x2};${x1}" keyTimes="0;0.4;0.75;1" dur="${dur}s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="${y1};${y2};${y2};${y1}" keyTimes="0;0.4;0.75;1" dur="${dur}s" repeatCount="indefinite"/>
+    </circle>
+    <text x="${labelX+perpOffX}" y="${labelY+perpOffY}" text-anchor="middle" font-family="Inter" font-weight="700" font-size="11" fill="var(--accent)">${label}</text>
+  </g>`;
+}
+function svgFrame(inner){
+  return `<svg viewBox="0 0 300 190" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+function personIcon(x,y,scale){
+  scale = scale||1;
+  return `<g transform="translate(${x},${y}) scale(${scale})" opacity="0.55">
+    <circle cx="0" cy="-20" r="5" fill="var(--text-dim)"/>
+    <line x1="0" y1="-15" x2="0" y2="0" stroke="var(--text-dim)" stroke-width="3"/>
+    <line x1="0" y1="-3" x2="-8" y2="10" stroke="var(--text-dim)" stroke-width="3"/>
+    <line x1="0" y1="-3" x2="8" y2="10" stroke="var(--text-dim)" stroke-width="3"/>
+    <line x1="0" y1="-11" x2="-10" y2="-4" stroke="var(--text-dim)" stroke-width="3"/>
+    <line x1="0" y1="-11" x2="10" y2="-2" stroke="var(--text-dim)" stroke-width="3"/>
+  </g>`;
+}
+
+/* ---------- Stage diagrams per concept ---------- */
+const D = {};
+
+D.coneDiameter = () => svgFrame(`
+  ${groundHatch(30,270,150)}
+  ${outline("60,150 150,30 240,150", 0.1)}
+  ${mLine(60,165,240,165,"Diamètre")}
+`);
+D.coneHeight = () => svgFrame(`
+  ${groundHatch(30,270,150)}
+  ${outline("60,150 150,30 240,150", 0.1)}
+  ${mLine(150,150,150,30,"Hauteur")}
+  ${personIcon(255,140,0.8)}
+`);
+D.wallRadius = (cfg) => svgFrame(`
+  ${wallHatch(50,20,150)}
+  ${groundHatch(50,270,150)}
+  ${cfg==='angle' ? groundHatch(50,120,150) : ''}
+  ${outline(cfg==='angle' ? "50,150 50,70 170,150" : "50,150 50,40 230,150", 0.1)}
+  ${mLine(50,170,cfg==='angle'?170:230,170,"Rayon depuis le mur")}
+`);
+D.wallHeight = (cfg) => svgFrame(`
+  ${wallHatch(50,20,150)}
+  ${groundHatch(50,270,150)}
+  ${outline(cfg==='angle' ? "50,150 50,70 170,150" : "50,150 50,40 230,150", 0.1)}
+  ${mLine(50,150,50,cfg==='angle'?70:40,"Hauteur")}
+`);
+D.wallConfigPreview = () => svgFrame(`
+  ${wallHatch(60,25,150)}${wallHatch(230,25,150)}
+  ${groundHatch(60,230,150)}
+  ${outline("60,150 60,55 150,150",0.12)}
+  <text x="150" y="178" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--text-dim)">Choisis ta situation</text>
+`);
+D.ridgeWidth = () => svgFrame(`
+  ${groundHatch(30,270,150)}
+  ${outline("70,150 150,55 230,150",0.1)}
+  ${mLine(70,165,230,165,"Largeur")}
+`);
+D.ridgeHeight = () => svgFrame(`
+  ${groundHatch(30,270,150)}
+  ${outline("70,150 150,55 230,150",0.1)}
+  ${mLine(150,150,150,55,"Hauteur")}
+`);
+D.ridgeLength = () => svgFrame(`
+  ${groundHatch(20,280,160)}
+  <path d="M30,160 Q80,100 150,98 Q220,100 270,160" fill="rgba(255,180,0,.08)" stroke="var(--text-dim)" stroke-width="2"/>
+  ${mLine(35,175,265,175,"Longueur totale")}
+  ${personIcon(280,150,0.7)}
+`);
+D.frustumBaseTop = (labels) => svgFrame(`
+  <rect x="40" y="40" width="220" height="120" fill="none" stroke="var(--text-dim)" stroke-width="2" stroke-dasharray="4 4"/>
+  <rect x="95" y="75" width="110" height="50" fill="rgba(255,180,0,.08)" stroke="var(--line-strong)" stroke-width="2"/>
+  ${mLine(40,172,260,172,labels.L)}
+  ${mLine(270,40,270,160,labels.l)}
+  <text x="150" y="104" text-anchor="middle" font-family="Inter" font-size="10" fill="var(--text-dim)">${labels.center||''}</text>
+`);
+D.frustumBase = () => D.frustumBaseTop({L:"Longueur (base)", l:"Largeur (base)", center:"dessus du tas"});
+D.frustumTop = () => D.frustumBaseTop({L:"Longueur (sommet)", l:"Largeur (sommet)", center:"zone plate du dessus"});
+D.frustumHeight = () => svgFrame(`
+  ${groundHatch(30,270,150)}
+  <polygon points="55,150 100,65 200,65 245,150" fill="rgba(255,180,0,.08)" stroke="var(--text-dim)" stroke-width="2"/>
+  ${mLine(150,150,150,65,"Hauteur")}
+`);
+D.benneBoxL = () => svgFrame(`
+  <polygon points="40,150 180,150 220,120 80,120" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="180,150 220,120 220,55 180,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="40,150 80,120 80,55 40,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polyline points="40,85 80,55 220,55 180,85" fill="none" stroke="var(--steel)" stroke-width="2"/>
+  ${mLine(40,168,180,168,"Longueur intérieure")}
+`);
+D.benneBoxl = () => svgFrame(`
+  <polygon points="40,150 180,150 220,120 80,120" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="180,150 220,120 220,55 180,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="40,150 80,120 80,55 40,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polyline points="40,85 80,55 220,55 180,85" fill="none" stroke="var(--steel)" stroke-width="2"/>
+  ${mLine(180,150,220,120,"Largeur intérieure")}
+`);
+D.benneBoxH = () => svgFrame(`
+  <polygon points="40,150 180,150 220,120 80,120" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="40,150 80,120 80,55 40,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polyline points="40,85 80,55 220,55 180,85" fill="none" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="180,150 220,120 220,55 180,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  ${mLine(40,150,40,85,"Hauteur de matière")}
+`);
+D.moundHeight = () => svgFrame(`
+  <polygon points="40,150 180,150 220,120 80,120" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="180,150 220,120 220,55 180,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="40,150 80,120 80,55 40,85" fill="rgba(111,168,204,.04)" stroke="var(--steel)" stroke-width="2"/>
+  <polyline points="40,85 80,55 220,55 180,85" fill="none" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="80,55 150,20 220,55 180,85 80,85" fill="rgba(255,180,0,.12)" stroke="var(--accent)" stroke-width="2"/>
+  ${mLine(150,55,150,20,"Monticule au-dessus")}
+`);
+D.trapTop = (labels) => svgFrame(`
+  <polygon points="50,160 250,160 215,55 85,55" fill="none" stroke="var(--line-strong)" stroke-width="2" stroke-dasharray="4 4"/>
+  <polygon points="90,140 210,140 195,80 105,80" fill="rgba(255,180,0,.08)" stroke="var(--text-dim)" stroke-width="2"/>
+  ${mLine(50,176,250,176,labels.Lbas)}
+  ${mLine(85,38,215,38,labels.Lhaut)}
+`);
+D.trapBas = () => D.trapTop({Lbas:"Longueur et largeur (fond)", Lhaut:""});
+D.trapHaut = () => D.trapTop({Lbas:"", Lhaut:"Longueur et largeur (haut, rebord)"});
+D.trapHeight = () => svgFrame(`
+  ${groundHatch(30,270,160)}
+  <polygon points="80,160 220,160 190,70 110,70" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  ${mLine(150,160,150,70,"Hauteur (fond → rebord)")}
+`);
+D.trapMound = () => svgFrame(`
+  ${groundHatch(30,270,160)}
+  <polygon points="80,160 220,160 190,70 110,70" fill="rgba(111,168,204,.08)" stroke="var(--steel)" stroke-width="2"/>
+  <polygon points="110,70 150,35 190,70" fill="rgba(255,180,0,.12)" stroke="var(--accent)" stroke-width="2"/>
+  ${mLine(150,70,150,35,"Monticule au-dessus du rebord")}
+`);
+
+/* ============================================================
+   SHAPES CONFIG
+   ============================================================ */
+function fmt(n, d){ return n.toLocaleString('fr-FR', {minimumFractionDigits:d===undefined?2:d, maximumFractionDigits:d===undefined?2:d}); }
+
+const SHAPES = {
+sol: [
+  {
+    id:'cone', name:'Tas conique', loc:'sol',
+    blurb:'Versé en un seul point, il forme un petit cône, comme un volcan.',
+    when:'Idéal quand le camion ou la pelle a déposé le matériau à un seul endroit et que le tas est à peu près rond, avec une pointe au centre.',
+    fields:[
+      {key:'diametre', label:'Diamètre de la base du tas', help:'Pose ton mètre bien à plat sur le sol, d\'un bord du tas à l\'autre, en passant par le centre (sous la pointe la plus haute).', diagram:'coneDiameter'},
+      {key:'hauteur', label:'Hauteur du tas', help:'Mesure à la verticale, du sommet du tas (le point le plus haut) jusqu\'au sol.', diagram:'coneHeight'}
+    ],
+    compute(v){ const r=v.diametre/2; return Math.PI*r*r*v.hauteur/3; },
+    explain(v,res){
+      const r=v.diametre/2;
+      return `Un tas conique, c'est comme une petite montagne pointue. On calcule d'abord la surface du cercle que forme sa base au sol, puis on la multiplie par la hauteur du tas — comme si on remplissait une colonne droite. Mais un tas pointu contient <b>3 fois moins</b> de matière qu'une colonne bien droite de la même base et de la même hauteur : c'est pour ça qu'on divise par 3 à la fin.
+      <div class="calc-line">Rayon = ${fmt(v.diametre,2)} ÷ 2 = ${fmt(r,2)} m<br>
+      Volume = 3,1416 × ${fmt(r,2)} × ${fmt(r,2)} × ${fmt(v.hauteur,2)} ÷ 3<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'cone-mur', name:'Tas contre un mur ou dans un angle', loc:'sol',
+    blurb:'Le tas est appuyé contre un mur, ou coincé dans un coin : il ne forme qu\'une moitié ou un quart de cône.',
+    when:'Très courant en cour de stockage : le matériau glisse contre un mur (ou deux murs qui forment un angle) et ne peut pas s\'étaler tout autour.',
+    fields:[
+      {key:'config', label:'Le tas touche...', type:'choice', diagram:'wallConfigPreview',
+       options:[{value:'mur', label:'Un seul mur (demi-tas)'},{value:'angle', label:'Deux murs, dans un coin (quart de tas)'}]},
+      {key:'rayon', label:'Distance entre le mur et le bord du tas', help:'Pose le zéro de ton mètre contre le mur (au ras du sol), et tire-le à l\'horizontale jusqu\'au point du tas le plus éloigné du mur.', diagram:'wallRadius'},
+      {key:'hauteur', label:'Hauteur du tas', help:'Mesure à la verticale, du sommet du tas jusqu\'au sol.', diagram:'wallHeight'}
+    ],
+    compute(v){ const base=Math.PI*v.rayon*v.rayon*v.hauteur/3; return v.config==='angle' ? base/4 : base/2; },
+    explain(v,res){
+      const base=Math.PI*v.rayon*v.rayon*v.hauteur/3;
+      const div = v.config==='angle' ? 4 : 2;
+      const situ = v.config==='angle' ? 'dans un coin, contre deux murs' : 'contre un seul mur';
+      return `Ton tas est ${situ}. On calcule d'abord le volume qu'aurait un cône complet avec ce rayon et cette hauteur, comme pour un tas normal. Mais comme le mur empêche la matière de s'étaler tout autour, il ne reste qu'une partie du cône : la moitié contre un mur, le quart dans un coin.
+      <div class="calc-line">Cône complet = 3,1416 × ${fmt(v.rayon,2)} × ${fmt(v.rayon,2)} × ${fmt(v.hauteur,2)} ÷ 3 = ${fmt(base,2)} m³<br>
+      Volume réel = ${fmt(base,2)} ÷ ${div}<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'ridge', name:'Tas allongé (en boudin)', loc:'sol',
+    blurb:'Le camion a déposé la matière en avançant : le tas forme une longue arête, comme un toit de maison.',
+    when:'Typique d\'un épandage à l\'arrière d\'un camion qui recule en déchargeant, ou d\'un andain formé par une pelle.',
+    fields:[
+      {key:'largeur', label:'Largeur de la base', help:'À l\'endroit le plus large du tas, mesure d\'un bord à l\'autre, au sol.', diagram:'ridgeWidth'},
+      {key:'hauteur', label:'Hauteur du tas', help:'Du sommet de l\'arête jusqu\'au sol, à la verticale, au même endroit que la largeur.', diagram:'ridgeHeight'},
+      {key:'longueur', label:'Longueur totale du tas', help:'D\'une extrémité du tas à l\'autre, dans le sens de la longueur.', diagram:'ridgeLength'}
+    ],
+    compute(v){ return (v.largeur*v.hauteur/2)*v.longueur; },
+    explain(v,res){
+      const aire = v.largeur*v.hauteur/2;
+      return `Vu de face, ton tas ressemble à un triangle, comme un toit de maison. La surface de ce triangle, c'est la largeur multipliée par la hauteur, divisée par 2. Ensuite, comme ce même triangle se répète tout le long du tas, on multiplie cette surface par la longueur totale.
+      <div class="calc-line">Surface du triangle = ${fmt(v.largeur,2)} × ${fmt(v.hauteur,2)} ÷ 2 = ${fmt(aire,2)} m²<br>
+      Volume = ${fmt(aire,2)} × ${fmt(v.longueur,2)}<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'frustum', name:'Tas étalé, dessus plat', loc:'sol',
+    blurb:'Un grand tas irrégulier, aplati ou nivelé sur le dessus, avec des pentes sur les côtés.',
+    when:'Le choix le plus fidèle à la réalité pour un gros volume livré en plusieurs bennes, ou un tas repris au godet : la base est large, le dessus est plus petit et à peu près plat.',
+    fields:[
+      {key:'longueurBase', label:'Longueur de la base (au sol)', help:'À la base du tas, au ras du sol, dans le sens le plus long.', diagram:'frustumBase'},
+      {key:'largeurBase', label:'Largeur de la base (au sol)', help:'À la base du tas, au ras du sol, perpendiculairement à la longueur.', diagram:'frustumBase'},
+      {key:'longueurSommet', label:'Longueur du dessus plat', help:'En haut du tas, sur la zone à peu près plate, dans le même sens que la longueur de la base.', diagram:'frustumTop'},
+      {key:'largeurSommet', label:'Largeur du dessus plat', help:'En haut du tas, sur la zone à peu près plate, perpendiculairement.', diagram:'frustumTop'},
+      {key:'hauteur', label:'Hauteur du tas', help:'À la verticale, entre le dessus plat et le sol.', diagram:'frustumHeight'}
+    ],
+    compute(v){
+      const A1=v.longueurBase*v.largeurBase, A2=v.longueurSommet*v.largeurSommet;
+      return v.hauteur/3*(A1+A2+Math.sqrt(A1*A2));
+    },
+    explain(v,res){
+      const A1=v.longueurBase*v.largeurBase, A2=v.longueurSommet*v.largeurSommet;
+      return `On imagine ton tas comme une pyramide à qui on aurait coupé la pointe. On calcule la surface de la base (en bas) et la surface du dessus plat (en haut, plus petite), puis on les mélange avec la hauteur. Un tas à dessus plat contient plus de matière qu'un tas pointu, mais moins qu'un bloc parfaitement droit — ce calcul tient compte des deux.
+      <div class="calc-line">Surface base = ${fmt(v.longueurBase,2)} × ${fmt(v.largeurBase,2)} = ${fmt(A1,2)} m²<br>
+      Surface dessus = ${fmt(v.longueurSommet,2)} × ${fmt(v.largeurSommet,2)} = ${fmt(A2,2)} m²<br>
+      Volume = ${fmt(v.hauteur,2)} ÷ 3 × (${fmt(A1,2)} + ${fmt(A2,2)} + √(${fmt(A1,2)}×${fmt(A2,2)}))<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  }
+],
+benne: [
+  {
+    id:'benne-niveau', name:'Benne remplie à niveau', loc:'benne',
+    blurb:'Le matériau remplit la benne jusqu\'à une certaine hauteur, sans dépasser le bord, le dessus est à peu près plat.',
+    when:'Simple et rapide : utilise cette forme si rien ne dépasse du bord de la benne et que le dessus est à peu près horizontal.',
+    fields:[
+      {key:'longueur', label:'Longueur intérieure de la benne', help:'Mesure à l\'intérieur, d\'une paroi à l\'autre, dans le sens le plus long.', diagram:'benneBoxL'},
+      {key:'largeur', label:'Largeur intérieure de la benne', help:'Mesure à l\'intérieur, d\'une paroi à l\'autre, perpendiculairement à la longueur.', diagram:'benneBoxl'},
+      {key:'hauteur', label:'Hauteur de matière', help:'Du fond de la benne (ou du niveau du tas) jusqu\'à la surface du matériau.', diagram:'benneBoxH'}
+    ],
+    compute(v){ return v.longueur*v.largeur*v.hauteur; },
+    explain(v,res){
+      return `C'est la forme la plus simple : une boîte. Le volume d'une boîte, c'est tout simplement sa longueur multipliée par sa largeur, multipliée par sa hauteur de matière.
+      <div class="calc-line">Volume = ${fmt(v.longueur,2)} × ${fmt(v.largeur,2)} × ${fmt(v.hauteur,2)}<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'benne-monticule', name:'Benne avec un monticule qui dépasse', loc:'benne',
+    blurb:'La benne est pleine à ras bord, et en plus un petit tas dépasse par-dessus le bord.',
+    when:'Fréquent sur une petite benne ou un conteneur bien chargé : il reste un dôme de matière qui monte au-dessus du bord.',
+    fields:[
+      {key:'longueur', label:'Longueur intérieure de la benne', help:'Mesure à l\'intérieur, d\'une paroi à l\'autre, dans le sens le plus long.', diagram:'benneBoxL'},
+      {key:'largeur', label:'Largeur intérieure de la benne', help:'Mesure à l\'intérieur, d\'une paroi à l\'autre, perpendiculairement.', diagram:'benneBoxl'},
+      {key:'hauteurBenne', label:'Hauteur intérieure jusqu\'au bord', help:'Du fond de la benne jusqu\'au bord supérieur (le rebord).', diagram:'benneBoxH'},
+      {key:'hauteurMonticule', label:'Hauteur du monticule au-dessus du bord', help:'Du niveau du bord de la benne jusqu\'au sommet du petit tas qui dépasse.', diagram:'moundHeight'}
+    ],
+    compute(v){ return v.longueur*v.largeur*v.hauteurBenne + (v.longueur*v.largeur*v.hauteurMonticule)/3; },
+    explain(v,res){
+      const boite = v.longueur*v.largeur*v.hauteurBenne;
+      const mont = (v.longueur*v.largeur*v.hauteurMonticule)/3;
+      return `On calcule d'abord la benne comme une boîte toute simple, remplie jusqu'au bord. Ensuite, on ajoute le petit tas qui dépasse par-dessus : on le traite comme une pointe posée sur le dessus de la benne — c'est une estimation couramment utilisée sur les chantiers, légèrement prudente.
+      <div class="calc-line">Partie boîte = ${fmt(v.longueur,2)} × ${fmt(v.largeur,2)} × ${fmt(v.hauteurBenne,2)} = ${fmt(boite,2)} m³<br>
+      Partie monticule = (${fmt(v.longueur,2)} × ${fmt(v.largeur,2)} × ${fmt(v.hauteurMonticule,2)}) ÷ 3 = ${fmt(mont,2)} m³<br>
+      Volume total = ${fmt(boite,2)} + ${fmt(mont,2)}<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'benne-trapeze', name:'Benne trapézoïdale, remplie à niveau', loc:'benne',
+    blurb:'La plupart des bennes de camion sont plus larges en haut qu\'au fond : la forme est un trapèze, pas un rectangle parfait.',
+    when:'Choisis cette forme pour une benne de camion classique (le haut est visiblement plus large que le fond), remplie sans dépasser le bord.',
+    fields:[
+      {key:'longueurBas', label:'Longueur au fond de la benne', help:'À l\'intérieur, tout en bas, dans le sens le plus long.', diagram:'trapBas'},
+      {key:'largeurBas', label:'Largeur au fond de la benne', help:'À l\'intérieur, tout en bas, perpendiculairement.', diagram:'trapBas'},
+      {key:'longueurHaut', label:'Longueur en haut (au rebord)', help:'Au niveau du bord supérieur de la benne, dans le même sens que la longueur du fond.', diagram:'trapHaut'},
+      {key:'largeurHaut', label:'Largeur en haut (au rebord)', help:'Au niveau du bord supérieur de la benne, perpendiculairement.', diagram:'trapHaut'},
+      {key:'hauteur', label:'Hauteur de matière', help:'Du fond de la benne jusqu\'à la surface du matériau (ou jusqu\'au bord si c\'est plein).', diagram:'trapHeight'}
+    ],
+    compute(v){
+      const A1=v.longueurBas*v.largeurBas, A2=v.longueurHaut*v.largeurHaut;
+      return v.hauteur/3*(A1+A2+Math.sqrt(A1*A2));
+    },
+    explain(v,res){
+      const A1=v.longueurBas*v.largeurBas, A2=v.longueurHaut*v.largeurHaut;
+      return `Comme la benne est plus large en haut qu'en bas, on ne peut pas juste faire longueur × largeur × hauteur — ce serait faux. On calcule la surface du fond, la surface du haut (plus grande), et on les mélange avec la hauteur pour obtenir le volume réel de cette forme en entonnoir inversé.
+      <div class="calc-line">Surface fond = ${fmt(v.longueurBas,2)} × ${fmt(v.largeurBas,2)} = ${fmt(A1,2)} m²<br>
+      Surface haut = ${fmt(v.longueurHaut,2)} × ${fmt(v.largeurHaut,2)} = ${fmt(A2,2)} m²<br>
+      Volume = ${fmt(v.hauteur,2)} ÷ 3 × (${fmt(A1,2)} + ${fmt(A2,2)} + √(${fmt(A1,2)}×${fmt(A2,2)}))<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  },
+  {
+    id:'benne-trapeze-monticule', name:'Benne trapézoïdale avec un monticule', loc:'benne',
+    blurb:'Benne plus large en haut qu\'au fond, ET un petit tas qui dépasse au-dessus du rebord.',
+    when:'Le cas le plus complet : une benne de camion classique, bien chargée, avec un dôme de matière qui dépasse du bord.',
+    fields:[
+      {key:'longueurBas', label:'Longueur au fond de la benne', help:'À l\'intérieur, tout en bas, dans le sens le plus long.', diagram:'trapBas'},
+      {key:'largeurBas', label:'Largeur au fond de la benne', help:'À l\'intérieur, tout en bas, perpendiculairement.', diagram:'trapBas'},
+      {key:'longueurHaut', label:'Longueur en haut (au rebord)', help:'Au niveau du bord supérieur de la benne.', diagram:'trapHaut'},
+      {key:'largeurHaut', label:'Largeur en haut (au rebord)', help:'Au niveau du bord supérieur de la benne, perpendiculairement.', diagram:'trapHaut'},
+      {key:'hauteur', label:'Hauteur intérieure jusqu\'au rebord', help:'Du fond de la benne jusqu\'au bord supérieur.', diagram:'trapHeight'},
+      {key:'hauteurMonticule', label:'Hauteur du monticule au-dessus du rebord', help:'Du bord de la benne jusqu\'au sommet du petit tas qui dépasse.', diagram:'trapMound'}
+    ],
+    compute(v){
+      const A1=v.longueurBas*v.largeurBas, A2=v.longueurHaut*v.largeurHaut;
+      const frustum = v.hauteur/3*(A1+A2+Math.sqrt(A1*A2));
+      return frustum + (A2*v.hauteurMonticule)/3;
+    },
+    explain(v,res){
+      const A1=v.longueurBas*v.largeurBas, A2=v.longueurHaut*v.largeurHaut;
+      const frustum = v.hauteur/3*(A1+A2+Math.sqrt(A1*A2));
+      const mont = (A2*v.hauteurMonticule)/3;
+      return `On additionne deux parties. D'abord la benne elle-même, en tenant compte qu'elle est plus large en haut qu'en bas. Ensuite, le monticule qui dépasse du bord, traité comme une petite pointe posée sur le dessus.
+      <div class="calc-line">Partie benne = ${fmt(frustum,2)} m³<br>
+      Partie monticule = (${fmt(A2,2)} × ${fmt(v.hauteurMonticule,2)}) ÷ 3 = ${fmt(mont,2)} m³<br>
+      Volume total = ${fmt(frustum,2)} + ${fmt(mont,2)}<br>
+      Volume = <b>${fmt(res,2)} m³</b></div>`;
+    }
+  }
+]
+};
+
+const SHAPE_INFO = {
+  sol:'Sur le sol, la réalité n\'est jamais parfaite : chaque tas a sa propre forme. Choisis celle qui ressemble le plus à ce que tu vois, quitte à mesurer plusieurs zones séparément si le tas est très irrégulier.',
+  benne:'Dans une benne, la forme du conteneur compte autant que le matériau : une benne de camion s\'évase presque toujours vers le haut, ce qui change le calcul.'
+};
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function go(screenId, push){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  if(push!==false){ state.history.push(screenId); }
+  document.getElementById('main').scrollTop = 0;
+  updateTotalBar();
+}
+function back(){
+  state.history.pop();
+  const prev = state.history[state.history.length-1] || 'screen-home';
+  go(prev, false);
+}
+
+/* ============================================================
+   RENDER: HOME
+   ============================================================ */
+function renderHome(){
+  const list = document.getElementById('homeZonesList');
+  const title = document.getElementById('zonesTitleHome');
+  if(state.zones.length===0){ title.style.display='none'; list.innerHTML=''; return; }
+  title.style.display='block';
+  list.innerHTML = state.zones.map((z,i)=>`
+    <div class="zone-row">
+      <div class="zi"><div class="zname">${z.name}</div><div class="zloc">${z.loc==='sol'?'Sur le sol':'Dans une benne'}</div></div>
+      <div class="zval">${fmt(z.m3,2)}</div>
+    </div>`).join('');
+}
+
+document.querySelectorAll('[data-loc]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    state.loc = btn.dataset.loc;
+    renderShapes();
+    go('screen-shapes');
+  });
+});
+
+/* ============================================================
+   RENDER: SHAPES LIST
+   ============================================================ */
+function renderShapes(){
+  document.getElementById('shapesTitle').textContent = state.loc==='sol' ? 'Quelle forme a le tas, au sol ?' : 'Quelle forme a la benne ?';
+  const wrap = document.getElementById('shapesList');
+  wrap.innerHTML = SHAPES[state.loc].map(s=>`
+    <div class="shape-card" data-shape="${s.id}">
+      <div class="thumb">${(D[s.fields[0].diagram] ? D[s.fields[0].diagram](s.id==='cone-mur'?'mur':undefined) : '')}</div>
+      <div class="body">
+        <div class="sname">${s.name}</div>
+        <div class="sdesc">${s.blurb}</div>
+      </div>
+      <button class="infobtn" data-info="${s.id}">ⓘ</button>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('.shape-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.infobtn')) return;
+      const shape = SHAPES[state.loc].find(x=>x.id===card.dataset.shape);
+      startMeasure(shape);
+    });
+  });
+  wrap.querySelectorAll('.infobtn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const shape = SHAPES[state.loc].find(x=>x.id===btn.dataset.info);
+      document.getElementById('infoTitle').textContent = shape.name;
+      document.getElementById('infoBody').textContent = shape.when;
+      openOverlay('overlayInfo');
+    });
+  });
+}
+
+/* ============================================================
+   MEASURE WIZARD
+   ============================================================ */
+function startMeasure(shape){
+  state.shape = shape;
+  state.stepIndex = 0;
+  state.values = {};
+  go('screen-measure');
+  renderStep();
+}
+
+function renderRuler(){
+  const total = state.shape.fields.length;
+  const bar = document.getElementById('rulerBar');
+  if(document.getElementById('screen-measure').classList.contains('active')){
+    let html='';
+    const ticks = Math.max(total*6, 24);
+    for(let i=0;i<ticks;i++){
+      const segProgress = (i/ticks)*total;
+      let cls='';
+      if(segProgress < state.stepIndex) cls='done';
+      else if(segProgress >= state.stepIndex && segProgress < state.stepIndex+1) cls='current';
+      html += `<i class="${cls}"></i>`;
+    }
+    bar.innerHTML = html;
+    bar.style.visibility='visible';
+  } else {
+    bar.style.visibility='hidden';
+  }
+}
+
+function renderStep(){
+  const shape = state.shape;
+  const field = shape.fields[state.stepIndex];
+  renderRuler();
+
+  // stage diagram
+  const diagramFn = D[field.diagram];
+  let diagramArg = (shape.id==='cone-mur') ? (state.values.config||'mur') : undefined;
+  document.getElementById('stageWrap').innerHTML = diagramFn ? diagramFn(diagramArg) : '';
+
+  const zone = document.getElementById('fieldZone');
+  if(field.type==='choice'){
+    zone.innerHTML = `
+      <div class="field-label">${field.label}</div>
+      <div class="field-help">${field.help||''}</div>
+      <div class="choice-row">
+        ${field.options.map(o=>`<button class="choice-btn" data-val="${o.value}">${o.label}</button>`).join('')}
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="stepBack">←</button>
+      </div>
+    `;
+    zone.querySelectorAll('.choice-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        state.values[field.key] = b.dataset.val;
+        nextStep();
+      });
+    });
+  } else {
+    const unitLabel = state.unit;
+    zone.innerHTML = `
+      <div class="field-label">${field.label}</div>
+      <div class="field-help">${field.help||''}</div>
+      <div class="num-input-row">
+        <input type="number" inputmode="decimal" step="any" class="num-input" id="numInput" placeholder="0" value="${state.values[field.key]!==undefined ? state.values[field.key] : ''}">
+        <div class="unit-pill">${unitLabel}</div>
+      </div>
+      <div class="field-error" id="fieldErr"></div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="stepBack">←</button>
+        <button class="btn btn-primary" id="stepNext">Suivant →</button>
+      </div>
+    `;
+    const input = document.getElementById('numInput');
+    setTimeout(()=>input.focus(), 50);
+    const commit = ()=>{
+      const raw = parseFloat(input.value.replace(',','.'));
+      if(isNaN(raw) || raw<=0){
+        document.getElementById('fieldErr').textContent = 'Entre un nombre supérieur à 0.';
+        input.style.borderColor = 'var(--warn)';
+        return false;
+      }
+      const meters = state.unit==='cm' ? raw/100 : raw;
+      state.values[field.key] = meters;
+      return true;
+    };
+    document.getElementById('stepNext').addEventListener('click', ()=>{
+      if(commit()) nextStep();
+    });
+    input.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ if(commit()) nextStep(); }
+    });
+    input.addEventListener('input', ()=>{ input.style.borderColor='var(--line)'; document.getElementById('fieldErr').textContent=''; });
+  }
+
+  document.getElementById('stepBack').addEventListener('click', ()=>{
+    if(state.stepIndex===0){ back(); }
+    else { state.stepIndex--; renderStep(); }
+  });
+}
+
+function nextStep(){
+  if(state.stepIndex < state.shape.fields.length-1){
+    state.stepIndex++;
+    renderStep();
+  } else {
+    showResult();
+  }
+}
+
+document.getElementById('measureBack').addEventListener('click', ()=>{
+  if(state.stepIndex===0){ back(); }
+  else { state.stepIndex--; renderStep(); }
+});
+document.getElementById('replayBtn').addEventListener('click', ()=>{ renderStep(); });
+
+/* ============================================================
+   RESULT
+   ============================================================ */
+let lastResult = 0;
+function showResult(){
+  const shape = state.shape;
+  const v = {};
+  shape.fields.forEach(f=>{ v[f.key]=state.values[f.key]; });
+  const res = shape.compute(v);
+  lastResult = res;
+  document.getElementById('resultShapeName').textContent = shape.name.toUpperCase();
+  document.getElementById('resultValue').textContent = fmt(res,2);
+  document.getElementById('explainBox').innerHTML = shape.explain(v,res);
+
+  const brouettes = res/0.08;
+  const camions = res/6;
+  let equiv = `Repère indicatif : environ ${fmt(brouettes,0)} brouettes de 80 L`;
+  if(camions>=0.3) equiv += `, ou ${fmt(camions,1)} camion(s) benne standard (~6 m³)`;
+  document.getElementById('resultEquiv').textContent = equiv + '.';
+
+  go('screen-result');
+}
+
+document.getElementById('addZoneBtn').addEventListener('click', ()=>{
+  state.zones.push({name:state.shape.name, loc:state.shape.loc, m3:lastResult});
+  renderHome();
+  updateTotalBar();
+  state.history = ['screen-home'];
+  go('screen-home', false);
+});
+document.getElementById('redoBtn').addEventListener('click', ()=>{
+  state.stepIndex = 0;
+  state.values = {};
+  go('screen-measure');
+  renderStep();
+});
+document.getElementById('newCalcBtn').addEventListener('click', ()=>{
+  state.history = ['screen-home'];
+  go('screen-home', false);
+});
+
+/* ============================================================
+   SUMMARY + TOTAL BAR
+   ============================================================ */
+function totalM3(){ return state.zones.reduce((a,z)=>a+z.m3,0); }
+
+function updateTotalBar(){
+  const bar = document.getElementById('totalbar');
+  const onFlowScreens = ['screen-home','screen-shapes','screen-summary'];
+  const current = state.history[state.history.length-1];
+  if(state.zones.length>0 && onFlowScreens.includes(current) && current!=='screen-summary'){
+    bar.classList.add('show');
+    document.getElementById('tbCount').textContent = state.zones.length;
+    document.getElementById('tbVal').textContent = fmt(totalM3(),2);
+  } else {
+    bar.classList.remove('show');
+  }
+}
+document.getElementById('tbSeeBtn').addEventListener('click', renderSummary);
+
+function renderSummary(){
+  const list = document.getElementById('summaryList');
+  if(state.zones.length===0){
+    list.innerHTML = `<p class="lead">Aucune zone ajoutée pour le moment.</p>`;
+  } else {
+    list.innerHTML = state.zones.map((z,i)=>`
+      <div class="zone-row">
+        <div class="zi"><div class="zname">${z.name}</div><div class="zloc">${z.loc==='sol'?'Sur le sol':'Dans une benne'}</div></div>
+        <div class="zval">${fmt(z.m3,2)}</div>
+        <button class="zdel" data-del="${i}">✕</button>
+      </div>`).join('');
+    list.querySelectorAll('.zdel').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        state.zones.splice(parseInt(b.dataset.del),1);
+        renderSummary();
+        renderHome();
+      });
+    });
+  }
+  document.getElementById('summaryTotal').textContent = fmt(totalM3(),2);
+  go('screen-summary');
+}
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const lines = state.zones.map(z=>`- ${z.name} (${z.loc==='sol'?'sol':'benne'}) : ${fmt(z.m3,2)} m³`);
+  const txt = `Cubage — ${state.zones.length} zone(s)\\n${lines.join('\\n')}\\nTOTAL : ${fmt(totalM3(),2)} m³`;
+  navigator.clipboard && navigator.clipboard.writeText(txt).then(()=>{
+    const b = document.getElementById('copyBtn');
+    const old = b.textContent;
+    b.textContent = '✓ Copié dans le presse-papiers';
+    setTimeout(()=>b.textContent=old, 1800);
+  }).catch(()=>{});
+});
+document.getElementById('resetAllBtn').addEventListener('click', ()=>{
+  if(confirm('Effacer toutes les zones mesurées ?')){
+    state.zones = [];
+    renderHome();
+    state.history = ['screen-home'];
+    go('screen-home', false);
+  }
+});
+
+/* ============================================================
+   HEADER / OVERLAYS
+   ============================================================ */
+document.querySelectorAll('[data-back]').forEach(b=>{
+  b.addEventListener('click', ()=>{ state.history=['screen-home']; go('screen-home', false); });
+});
+document.getElementById('unitToggle').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  state.unit = btn.dataset.u;
+  document.querySelectorAll('#unitToggle button').forEach(b=>b.classList.toggle('active', b===btn));
+  if(document.getElementById('screen-measure').classList.contains('active')) renderStep();
+});
+function openOverlay(id){ document.getElementById(id).classList.add('show'); }
+function closeOverlays(){ document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show')); }
+document.getElementById('helpBtn').addEventListener('click', ()=>openOverlay('overlayTape'));
+document.getElementById('tapeTip').addEventListener('click', ()=>openOverlay('overlayTape'));
+document.querySelectorAll('[data-close-overlay]').forEach(b=>b.addEventListener('click', closeOverlays));
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click', (e)=>{ if(e.target===o) closeOverlays(); });
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderHome();
+go('screen-home', false);
+state.history = ['screen-home'];
+updateTotalBar();
+
+})();
+</script>
+</body>
+</html>
